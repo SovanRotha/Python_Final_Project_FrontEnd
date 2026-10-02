@@ -52,21 +52,21 @@ function UserSideBar() {
   ];
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-slate-200 bg-white">
+    <aside className="fixed inset-x-0 bottom-0 z-50 flex h-16 w-full flex-row border-t border-slate-200 bg-white md:sticky md:top-0 md:h-screen md:w-64 md:flex-col md:border-r md:border-t-0">
       {/* Brand Logo Section */}
-      <div className="flex h-20 w-full items-center px-15">
+      <div className="hidden h-20 w-full items-center px-15 md:flex">
         <img src={Logo} alt="TripOS" className="h-14 w-auto object-contain" />
       </div>
 
       {/* Workspace Header */}
-      <div className="px-5 pb-3">
+      <div className="hidden px-5 pb-3 md:block">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Workspace
         </p>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2 md:block md:space-y-1 md:px-3 md:py-0">
         {menuItems.map((item) => {
           const IconComponent = item.icon;
 
@@ -74,8 +74,10 @@ function UserSideBar() {
             <NavLink
               key={item.name}
               to={item.path}
+              aria-label={item.name}
+              title={item.name}
               className={({ isActive }) =>
-                `group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
+                `group relative flex h-full min-w-12 flex-1 items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-all duration-200 md:h-auto md:w-full md:justify-start md:gap-3 md:rounded-xl md:px-3 md:py-3 ${
                   isActive
                     ? "bg-slate-900 text-white shadow-sm"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -86,7 +88,7 @@ function UserSideBar() {
                 <>
                   {/* Active Indicator */}
                   {isActive && (
-                    <span className="absolute left-0 h-6 w-1 rounded-r-full bg-blue-500" />
+                    <span className="absolute left-0 hidden h-6 w-1 rounded-r-full bg-blue-500 md:block" />
                   )}
 
                   {/* Icon */}
@@ -101,12 +103,12 @@ function UserSideBar() {
                   />
 
                   {/* Menu Name */}
-                  <span className="flex-1 text-left">{item.name}</span>
+                  <span className="hidden flex-1 text-left md:flex">{item.name}</span>
 
                   {/* PRO Badge */}
                   {item.badge && (
                     <span
-                      className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wide ${
+                      className={`hidden rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wide md:inline-flex ${
                         isActive
                           ? "bg-white/15 text-white"
                           : "bg-violet-100 text-violet-600"
@@ -118,7 +120,7 @@ function UserSideBar() {
 
                   {/* Notification Dot */}
                   {item.dot && (
-                    <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                    <span className="absolute right-2 top-2 flex h-2.5 w-2.5 items-center justify-center md:relative md:right-auto md:top-auto">
                       <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-blue-400 opacity-40" />
                       <span className="relative h-2 w-2 rounded-full bg-blue-500" />
                     </span>
@@ -131,7 +133,7 @@ function UserSideBar() {
       </nav>
 
       {/* Bottom User Section */}
-      <div className="border-t border-slate-200 p-4">
+      <div className="hidden border-t border-slate-200 p-4 md:block">
         <div className="flex items-center gap-3 rounded-xl px-2 py-2">
           {/* Avatar */}
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">

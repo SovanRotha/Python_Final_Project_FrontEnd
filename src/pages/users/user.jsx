@@ -1,34 +1,69 @@
+import React, { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import AIAssistant from "../../screen/userScreen/ai_assistant";
-import Budget from "../../screen/userScreen/budget";
-import Explore from "../../screen/userScreen/explore";
 import Home from "../../screen/userScreen/home";
-import Notification from "../../screen/userScreen/notification";
+import Explore from "../../screen/userScreen/explore";
 import Saved from "../../screen/userScreen/saved";
 import Trip from "../../screen/userScreen/trip";
+import Budget from "../../screen/userScreen/budget";
+import AIAssistant from "../../screen/userScreen/ai_assistant";
+import Notification from "../../screen/userScreen/notification";
 import UserSideBar from "../../shared/components/UserSideBar";
 
 function UserPage() {
-    return (
-        <BrowserRouter>
-            <div className="flex min-h-screen">
-                <UserSideBar />
+  const [savedPlaces, setSavedPlaces] = useState([]);
 
-                <main className="flex-1">
-                    <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/explore" element={<Explore />} />
-                        <Route path="/saved" element={<Saved />} />
-                        <Route path="/trips" element={<Trip />} />
-                        <Route path="/budget" element={<Budget />} />
-                        <Route path="/ai" element={<AIAssistant />} />
-                        <Route path="/notifications" element={<Notification />} />
-                    </Routes>
-                </main>
-            </div>
-        </BrowserRouter>
+  const handleToggleSave = (placeId) => {
+    setSavedPlaces((prev) =>
+      prev.includes(placeId)
+        ? prev.filter((id) => id !== placeId)
+        : [...prev, placeId]
     );
+  };
+
+  return (
+    <BrowserRouter>
+      <div className="flex h-dvh overflow-hidden bg-slate-50">
+        <UserSideBar />
+
+        <main className="h-full min-w-0 flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Home
+                  savedPlaces={savedPlaces}
+                  onToggleSave={handleToggleSave}
+                />
+              }
+            />
+            <Route
+              path="/explore"
+              element={
+                <Explore
+                  savedPlaces={savedPlaces}
+                  onToggleSave={handleToggleSave}
+                />
+              }
+            />
+            <Route
+              path="/saved"
+              element={
+                <Saved
+                  savedPlaces={savedPlaces}
+                  onToggleSave={handleToggleSave}
+                />
+              }
+            />
+            <Route path="/trips" element={<Trip />} />
+            <Route path="/budget" element={<Budget />} />
+            <Route path="/ai" element={<AIAssistant />} />
+            <Route path="/notifications" element={<Notification />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
 }
 
 export default UserPage;
