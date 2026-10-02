@@ -42,6 +42,7 @@ function UserSideBar() {
       icon: Sparkles,
       path: "/ai",
       badge: "PRO",
+      accent: "indigo",
     },
     {
       name: "Notifications",
@@ -60,7 +61,7 @@ function UserSideBar() {
 
       {/* Workspace Header */}
       <div className="hidden px-5 pb-3 md:block">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
           Workspace
         </p>
       </div>
@@ -69,6 +70,7 @@ function UserSideBar() {
       <nav className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2 md:block md:space-y-1 md:px-3 md:py-0">
         {menuItems.map((item) => {
           const IconComponent = item.icon;
+          const isIndigo = item.accent === "indigo";
 
           return (
             <NavLink
@@ -79,8 +81,12 @@ function UserSideBar() {
               className={({ isActive }) =>
                 `group relative flex h-full min-w-12 flex-1 items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-all duration-200 md:h-auto md:w-full md:justify-start md:gap-3 md:rounded-xl md:px-3 md:py-3 ${
                   isActive
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? isIndigo
+                      ? "bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/25"
+                      : "bg-[#0D9488] text-white shadow-md shadow-[#0D9488]/25"
+                    : isIndigo
+                      ? "text-[#64748B] hover:bg-[#6366F1]/10 hover:text-[#6366F1]"
+                      : "text-[#64748B] hover:bg-[#0D9488]/10 hover:text-[#0D9488]"
                 }`
               }
             >
@@ -88,7 +94,7 @@ function UserSideBar() {
                 <>
                   {/* Active Indicator */}
                   {isActive && (
-                    <span className="absolute left-0 hidden h-6 w-1 rounded-r-full bg-blue-500 md:block" />
+                    <span className="absolute left-0 hidden h-6 w-1 rounded-r-full bg-white/80 md:block" />
                   )}
 
                   {/* Icon */}
@@ -98,20 +104,24 @@ function UserSideBar() {
                     className={
                       isActive
                         ? "shrink-0 text-white"
-                        : "shrink-0 text-slate-400 group-hover:text-slate-700"
+                        : isIndigo
+                          ? "shrink-0 text-[#64748B] group-hover:text-[#6366F1]"
+                          : "shrink-0 text-[#64748B] group-hover:text-[#0D9488]"
                     }
                   />
 
                   {/* Menu Name */}
-                  <span className="hidden flex-1 text-left md:flex">{item.name}</span>
+                  <span className="hidden flex-1 text-left md:flex">
+                    {item.name}
+                  </span>
 
                   {/* PRO Badge */}
                   {item.badge && (
                     <span
                       className={`hidden rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wide md:inline-flex ${
                         isActive
-                          ? "bg-white/15 text-white"
-                          : "bg-violet-100 text-violet-600"
+                          ? "bg-white/20 text-white"
+                          : "bg-[#6366F1]/10 text-[#6366F1]"
                       }`}
                     >
                       {item.badge}
@@ -121,8 +131,8 @@ function UserSideBar() {
                   {/* Notification Dot */}
                   {item.dot && (
                     <span className="absolute right-2 top-2 flex h-2.5 w-2.5 items-center justify-center md:relative md:right-auto md:top-auto">
-                      <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-blue-400 opacity-40" />
-                      <span className="relative h-2 w-2 rounded-full bg-blue-500" />
+                      <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-[#10B981] opacity-40" />
+                      <span className="relative h-2 w-2 rounded-full bg-[#10B981]" />
                     </span>
                   )}
                 </>
@@ -134,9 +144,9 @@ function UserSideBar() {
 
       {/* Bottom User Section */}
       <div className="hidden border-t border-slate-200 p-4 md:block">
-        <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+        <div className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[#0D9488]/5">
           {/* Avatar */}
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0D9488] to-[#6366F1] text-sm font-semibold text-white">
             SR
           </div>
 
@@ -146,7 +156,8 @@ function UserSideBar() {
               Sovan Rotha
             </p>
 
-            <p className="truncate text-xs text-slate-400">
+            <p className="flex items-center gap-1.5 truncate text-xs text-[#64748B]">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#10B981]" />
               Personal Workspace
             </p>
           </div>

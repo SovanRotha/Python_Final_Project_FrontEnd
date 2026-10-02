@@ -1,26 +1,63 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useState } from 'react';
 
-// Import Sidebar
 import UserSideBar from './shared/components/UserSideBar';
-
-// Import Screens
 import Home from './screen/userScreen/home';
 import Explore from './screen/userScreen/explore';
+import Saved from './screen/userScreen/saved';
+import Trip from './screen/userScreen/trip';
+import Budget from './screen/userScreen/budget';
+import AIAssistant from './screen/userScreen/ai_assistant';
+import Notification from './screen/userScreen/notification';
 
 export default function UserPage() {
-  return (
-    <div className="flex min-h-screen bg-slate-50">
-      {/* 1. Left Sidebar */}
-      <UserSideBar />
+  const [savedPlaces, setSavedPlaces] = useState([]);
 
-      {/* 2. Main Right Content Area */}
-      <main className="flex-1 w-full overflow-y-auto min-h-screen">
+  const handleToggleSave = (placeId) => {
+    setSavedPlaces((current) =>
+      current.includes(placeId)
+        ? current.filter((id) => id !== placeId)
+        : [...current, placeId],
+    );
+  };
+
+  return (
+    <div className="flex h-dvh overflow-hidden bg-slate-50">
+      <UserSideBar />
+      <main className="h-full min-w-0 flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/Home" element={<Home />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/explore" element={<Explore />} />
+          <Route
+            path="/"
+            element={
+              <Home
+                savedPlaces={savedPlaces}
+                onToggleSave={handleToggleSave}
+              />
+            }
+          />
+          <Route
+            path="/explore"
+            element={
+              <Explore
+                savedPlaces={savedPlaces}
+                onToggleSave={handleToggleSave}
+              />
+            }
+          />
+          <Route
+            path="/saved"
+            element={
+              <Saved
+                savedPlaces={savedPlaces}
+                onToggleSave={handleToggleSave}
+              />
+            }
+          />
+          <Route path="/trips" element={<Trip />} />
+          <Route path="/budget" element={<Budget />} />
+          <Route path="/ai" element={<AIAssistant />} />
+          <Route path="/notifications" element={<Notification />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>

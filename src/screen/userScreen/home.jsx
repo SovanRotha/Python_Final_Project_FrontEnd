@@ -17,7 +17,6 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [localSaved, setLocalSaved] = useState([]);
 
   // Data & Loading States
   const [destinations, setDestinations] = useState(POPULAR_DESTINATIONS);
@@ -53,11 +52,10 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
     };
   }, []);
   const safeSavedPlaces = Array.isArray(savedPlaces) ? savedPlaces : [];
-  const isSaved = (id) => (safeSavedPlaces.length > 0) ? safeSavedPlaces.includes(id) : localSaved.includes(id);
+  const isSaved = (id) => safeSavedPlaces.includes(id);
 
   const toggleSave = (id) => {
     onToggleSave(id);
-    setLocalSaved(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const filteredDestinations = destinations.filter(item => {
