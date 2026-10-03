@@ -1,28 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import DestinationCard, {
-  POPULAR_DESTINATIONS,
-} from '../../features/discovery/page/components/DestinationCard';
-import { withFallbackDestinations } from '../../features/discovery/page/destinationCatalog';
-import { getDestinations } from '../../services/api/destinationservices';
+import DestinationCard from '../../features/discovery/page/components/DestinationCard';
+import { getHomeDestinations } from '../../services/api/homeApi';
+import { fetchPlaces } from '../../services/api/placeapi';
 import { searchWikipediaPlaces } from '../../services/api/wikipediaPlaces';
 
-const CATEGORIES = ['All', 'Popular', 'Beach', 'Culture', 'Budget Friendly'];
-const DESTINATION_PAGE_SIZE = 50;
+const CATEGORIES = ['All', 'Destinations', 'Places'];
 
-function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
+function Explore({
+  savedPlaces = [],
+  onToggleSave = () => {},
+  canSavePlaces = false,
+  savingPlaceIds = [],
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const initialSearch = new URLSearchParams(location.search).get('search')?.trim() || '';
   const [query, setQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState('All');
   
-  // API State
   const [destinations, setDestinations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isUsingFallback, setIsUsingFallback] = useState(false);
-  const [requestedLimit, setRequestedLimit] = useState(DESTINATION_PAGE_SIZE);
+  const [apiError, setApiError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [onlineResults, setOnlineResults] = useState(null);
   const [isSearchingOnline, setIsSearchingOnline] = useState(Boolean(initialSearch));
   const [isLoadingMoreOnline, setIsLoadingMoreOnline] = useState(false);
@@ -34,28 +34,83 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
     let isMounted = true;
 
     async function loadData() {
-      const apiData = await getDestinations(requestedLimit);
+      const [destinationResult, placeResult] = await Promise.allSettled([
+        getHomeDestinations(),
+        fetchPlaces(),
+      ]);
 
-      if (isMounted) {
-        const hasCompleteApiCatalog =
-          Array.isArray(apiData) &&
-          apiData.length >= POPULAR_DESTINATIONS.length;
-        setIsUsingFallback(!hasCompleteApiCatalog);
-        setDestinations(withFallbackDestinations(apiData));
-        setIsLoading(false);
-        setIsLoadingMore(false);
+      if (!isMounted) {
+        return;
       }
+
+      const destinationData =
+        destinationResult.status === 'fulfilled'
+          ? destinationResult.value.map((destination) => ({
+              ...destination,
+              kind: 'destination',
+              title: destination.country
+                ? `${destination.name}, ${destination.country}`
+                : destination.name,
+              desc: destination.description || '',
+              img: destination.image || '',
+              avgCost:
+                destination.average_daily_cost == null
+                  ? ''
+                  : `${destination.average_daily_cost} ${destination.currency || ''}/day avg`.trim(),
+              type: 'Destinations',
+            }))
+          : [];
+      const destinationNames = new Map(
+        (destinationResult.status === 'fulfilled'
+          ? destinationResult.value
+          : []
+        ).map((destination) => [
+          String(destination.id),
+          [destination.name, destination.country].filter(Boolean).join(', '),
+        ]),
+      );
+      const placeData =
+        placeResult.status === 'fulfilled'
+          ? placeResult.value.map((place) => ({
+              ...place,
+              kind: 'place',
+              title: place.name,
+              desc: place.description || '',
+              location:
+                destinationNames.get(String(place.destination_id)) ||
+                place.address ||
+                '',
+              img: place.image || '',
+              tags: place.category ? [place.category] : [],
+            }))
+          : [];
+
+      setDestinations([...destinationData, ...placeData]);
+      setApiError(
+        [destinationResult, placeResult]
+          .filter((result) => result.status === 'rejected')
+          .map((result) =>
+            result.reason instanceof Error
+              ? result.reason.message
+              : 'An API request failed.',
+          )
+          .join(' '),
+      );
+      setIsLoading(false);
     }
 
-    loadData();
+    void loadData();
 
     return () => {
       isMounted = false;
     };
-  }, [requestedLimit]);
+  }, [reloadKey]);
 
-  const canLoadMore =
-    !isUsingFallback && destinations.length >= requestedLimit;
+  function retryLoad() {
+    setIsLoading(true);
+    setApiError('');
+    setReloadKey((key) => key + 1);
+  }
 
   async function completeOnlineSearch(searchTerm) {
     try {
@@ -134,7 +189,9 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
 
       const matchesCategory =
         selectedCategory === 'All' ||
-        tags.some((tag) => tag.toLowerCase() === selectedCategory.toLowerCase());
+        (selectedCategory === 'Destinations' &&
+          place.kind === 'destination') ||
+        (selectedCategory === 'Places' && place.kind === 'place');
 
       return matchesQuery && matchesCategory;
     });
@@ -151,10 +208,10 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
               TripOS Discovery
             </span>
             <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
-              Explore Destinations
+              Explore Destinations & Places
             </h1>
             <p className="text-sm text-teal-100/80 sm:text-base">
-              Search popular places, compare daily costs, and click any destination to view full details.
+              Browse destinations and places from the API, or search Wikipedia for more ideas.
             </p>
           </div>
           <div className="absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
@@ -201,7 +258,7 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
                 disabled={!query.trim() || isSearchingOnline}
                 className="rounded-2xl bg-teal-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSearchingOnline ? 'Searching…' : 'Search all places'}
+                {isSearchingOnline ? 'Searching…' : 'Search Wikipedia'}
               </button>
             </form>
 
@@ -210,9 +267,25 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
               <span className="text-teal-700">
                 {onlineResults ? onlineResults.length : filteredPlaces.length}
               </span>{' '}
-              {onlineResults ? 'online places' : 'destinations'}
+              {onlineResults ? 'Wikipedia places' : 'API results'}
             </div>
           </div>
+
+          {apiError && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+            >
+              <p>{apiError}</p>
+              <button
+                className="font-semibold underline"
+                onClick={retryLoad}
+                type="button"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 pt-1">
             {CATEGORIES.map((category) => (
@@ -286,8 +359,14 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
                   <div key={place.id} className="space-y-2">
                     <DestinationCard
                       item={place}
-                      isSaved={savedPlaces.includes(place.id)}
+                      isSaved={savedPlaces.some(
+                        (savedId) => String(savedId) === String(place.id),
+                      )}
                       onToggleSave={onToggleSave}
+                      showSave={canSavePlaces && place.kind === 'place'}
+                      isSaving={savingPlaceIds.some(
+                        (savingId) => String(savingId) === String(place.id),
+                      )}
                       onAddToTrips={() =>
                         navigate('/trips', { state: { addDestination: place } })
                       }
@@ -348,8 +427,14 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
               >
                 <DestinationCard
                   item={place}
-                  isSaved={savedPlaces.includes(place.id)}
+                  isSaved={savedPlaces.some(
+                    (savedId) => String(savedId) === String(place.id),
+                  )}
                   onToggleSave={onToggleSave}
+                  showSave={canSavePlaces && place.kind === 'place'}
+                  isSaving={savingPlaceIds.some(
+                    (savingId) => String(savingId) === String(place.id),
+                  )}
                   onAddToTrips={() =>
                     navigate('/trips', { state: { addDestination: place } })
                   }
@@ -362,9 +447,11 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
               </div>
             ))}
           </div>
-        ) : onlineResults === null ? (
+        ) : onlineResults === null && !isLoading && !apiError ? (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
-            <p className="text-base font-semibold text-slate-700">No destinations match “{query}”</p>
+            <p className="text-base font-semibold text-slate-700">
+              No API results match “{query}”
+            </p>
             <p className="mt-1 text-sm text-slate-500">
               Try adjusting your search terms or clearing selected category filters.
             </p>
@@ -379,22 +466,6 @@ function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
             </button>
           </div>
         ) : null}
-
-        {onlineResults === null && !isLoading && canLoadMore && (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              disabled={isLoadingMore}
-              onClick={() => {
-                setIsLoadingMore(true);
-                setRequestedLimit((currentLimit) => currentLimit + DESTINATION_PAGE_SIZE);
-              }}
-              className="rounded-xl border border-teal-200 bg-white px-6 py-3 text-sm font-bold text-teal-700 shadow-sm transition hover:bg-teal-50 disabled:cursor-wait disabled:opacity-60"
-            >
-              {isLoadingMore ? 'Loading more destinations…' : 'Load more destinations'}
-            </button>
-          </div>
-        )}
 
       </div>
 

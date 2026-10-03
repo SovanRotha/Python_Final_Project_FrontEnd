@@ -7,10 +7,12 @@ import {
   Wallet,
   Sparkles,
   Bell,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-function UserSideBar() {
+function UserSideBar({ onSignOut, isSignedIn }) {
   const menuItems = [
     {
       name: "Home",
@@ -48,7 +50,6 @@ function UserSideBar() {
       name: "Notifications",
       icon: Bell,
       path: "/notifications",
-      dot: true,
     },
   ];
 
@@ -142,27 +143,28 @@ function UserSideBar() {
         })}
       </nav>
 
-      {/* Bottom User Section */}
-      <div className="hidden border-t border-slate-200 p-4 md:block">
-        <div className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[#0D9488]/5">
-          {/* Avatar */}
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0D9488] to-[#6366F1] text-sm font-semibold text-white">
-            SR
-          </div>
-
-          {/* User Info */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-800">
-              Sovan Rotha
-            </p>
-
-            <p className="flex items-center gap-1.5 truncate text-xs text-[#64748B]">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#10B981]" />
-              Personal Workspace
-            </p>
-          </div>
-        </div>
-      </div>
+      {isSignedIn ? (
+        <button
+          aria-label="Sign out"
+          className="flex h-12 w-12 shrink-0 items-center justify-center text-slate-500 transition hover:text-red-600 md:h-auto md:w-full md:justify-start md:gap-3 md:border-t md:border-slate-200 md:px-5 md:py-5"
+          onClick={onSignOut}
+          title="Sign out"
+          type="button"
+        >
+          <LogOut size={19} />
+          <span className="hidden text-sm font-medium md:inline">Sign out</span>
+        </button>
+      ) : (
+        <NavLink
+          aria-label="Sign in or create an account"
+          className="flex h-12 w-12 shrink-0 items-center justify-center text-slate-500 transition hover:text-teal-700 md:h-auto md:w-full md:justify-start md:gap-3 md:border-t md:border-slate-200 md:px-5 md:py-5"
+          title="Sign in"
+          to="/login"
+        >
+          <LogIn size={19} />
+          <span className="hidden text-sm font-medium md:inline">Sign in</span>
+        </NavLink>
+      )}
     </aside>
   );
 }

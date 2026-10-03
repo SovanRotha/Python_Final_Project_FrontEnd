@@ -258,6 +258,8 @@ export default function DestinationCard({
   item,
   isSaved,
   onToggleSave,
+  showSave = false,
+  isSaving = false,
   onAddToTrips,
   onClick,
 }) {
@@ -299,20 +301,23 @@ export default function DestinationCard({
             {item.avgCost}
           </div>
         )}
-        <button 
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleSave(item.id);
-          }}
-          aria-label={isSaved ? 'Remove saved place' : 'Save place'}
-          className={`absolute right-4 top-4 z-10 rounded-full p-2 backdrop-blur-md transition ${
-            isSaved ? 'bg-red-500 text-white' : 'bg-white/80 text-slate-700 hover:bg-white'
-          }`}
-        >
-          <IconHeart active={isSaved} />
-        </button>
-        <div className="relative z-10 pt-10">
+        {showSave && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleSave(item.id);
+            }}
+            disabled={isSaving}
+            aria-label={isSaved ? 'Remove saved place' : 'Save place'}
+            className={`absolute right-4 top-4 z-10 rounded-full p-2 backdrop-blur-md transition disabled:opacity-50 ${
+              isSaved ? 'bg-red-500 text-white' : 'bg-white/80 text-slate-700 hover:bg-white'
+            }`}
+          >
+            <IconHeart active={isSaved} />
+          </button>
+        )}
+        <div className={`relative z-10 ${showSave || item.avgCost ? 'pt-10' : 'pt-1'}`}>
           {item.category && (
             <p className="text-[10px] font-bold uppercase tracking-wide text-teal-200">
               {item.category}
@@ -363,7 +368,15 @@ export default function DestinationCard({
 }
 
 // Recommended Place Card
-export function PlaceCard({ place, onClick, onAddToTrips }) {
+export function PlaceCard({
+  place,
+  onClick,
+  onAddToTrips,
+  isSaved = false,
+  onToggleSave,
+  showSave = false,
+  isSaving = false,
+}) {
   if (!place) return null;
 
   return (
@@ -397,6 +410,24 @@ export function PlaceCard({ place, onClick, onAddToTrips }) {
           />
         )}
         <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-900/20 to-slate-900/20" />
+        {showSave && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleSave(place.id);
+            }}
+            disabled={isSaving}
+            aria-label={isSaved ? 'Remove saved place' : 'Save place'}
+            className={`absolute right-4 top-4 z-10 rounded-full p-2 backdrop-blur-md transition disabled:opacity-50 ${
+              isSaved
+                ? 'bg-red-500 text-white'
+                : 'bg-white/80 text-slate-700 hover:bg-white'
+            }`}
+          >
+            <IconHeart active={isSaved} />
+          </button>
+        )}
         <div className="relative z-10">
         <div className="text-[10px] font-bold uppercase tracking-wide text-teal-200">
           {place.category || place.type}

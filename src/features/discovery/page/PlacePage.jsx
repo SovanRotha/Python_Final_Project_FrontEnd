@@ -12,7 +12,12 @@ import { getWikipediaPlaceById } from '../../../services/api/wikipediaPlaces';
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&auto=format&fit=crop&q=80';
 
-export default function PlacePage({ savedPlaces = [], onToggleSave = () => {} }) {
+export default function PlacePage({
+  savedPlaces = [],
+  onToggleSave = () => {},
+  canSavePlaces = false,
+  savingPlaceIds = [],
+}) {
   const { placeId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -112,7 +117,9 @@ export default function PlacePage({ savedPlaces = [], onToggleSave = () => {} })
     destination.estimatedCost ||
     destination.avgCost ||
     'Not available';
-  const isSaved = savedPlaces.includes(destination.id);
+  const isSaved = savedPlaces.some(
+    (savedId) => String(savedId) === String(destination.id),
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 text-slate-800 sm:p-10">
@@ -220,9 +227,13 @@ export default function PlacePage({ savedPlaces = [], onToggleSave = () => {} })
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+              {destination.kind === 'place' && canSavePlaces && (
               <button
                 type="button"
                 onClick={() => onToggleSave(destination.id)}
+                disabled={savingPlaceIds.some(
+                  (savingId) => String(savingId) === String(destination.id),
+                )}
                 className={`rounded-2xl border px-6 py-3 text-sm font-bold transition ${
                   isSaved
                     ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
@@ -231,6 +242,7 @@ export default function PlacePage({ savedPlaces = [], onToggleSave = () => {} })
               >
                 {isSaved ? '♥ Saved' : '♡ Save Place'}
               </button>
+              )}
               <button
                 type="button"
                 onClick={() =>

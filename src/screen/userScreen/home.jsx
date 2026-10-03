@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  getDestinations,
-  getRecommendedPlaces,
-} from '../../services/api/destinationservices';
+  getHomeDestinations,
+} from '../../services/api/homeApi';
+import { fetchPlaces } from '../../services/api/placeapi';
 import DestinationCard, { 
   PlaceCard, 
-  POPULAR_DESTINATIONS, 
-  RECOMMENDED_PLACES,
   IconSearch,
   IconCalendar,
   IconUsers,
@@ -15,51 +13,112 @@ import DestinationCard, {
   IconSparkles,
   IconChevronRight
 } from '../../features/discovery/page/components/DestinationCard';
-import { withFallbackDestinations } from '../../features/discovery/page/destinationCatalog';
 
-export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
+export default function Home({
+  savedPlaces = [],
+  onToggleSave = () => {},
+  canSavePlaces = false,
+  savingPlaceIds = [],
+}) {
   const navigate = useNavigate();
   const popularDestinationsRef = useRef(null);
   const popularDestinationsGroupRef = useRef(null);
   const popularDestinationsTrackRef = useRef(null);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [destinations, setDestinations] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [destinationsLoading, setDestinationsLoading] = useState(true);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [destinationsError, setDestinationsError] = useState('');
+  const [recommendationsError, setRecommendationsError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Data & Loading States
-  const [destinations, setDestinations] = useState(POPULAR_DESTINATIONS);
-  const [recommendations, setRecommendations] = useState(RECOMMENDED_PLACES);
-  
   useEffect(() => {
     let cancelled = false;
 
     async function loadData() {
-      const [apiDestinations, apiPlaces] = await Promise.all([
-        getDestinations(100),
-        getRecommendedPlaces(100),
+      const [destinationResult, placesResult] = await Promise.allSettled([
+        getHomeDestinations(100),
+        fetchPlaces(100),
       ]);
 
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
 
-      setDestinations(withFallbackDestinations(apiDestinations));
-      setRecommendations(
-        Array.isArray(apiPlaces) && apiPlaces.length > 0
-          ? apiPlaces
-          : RECOMMENDED_PLACES,
-      );
+      if (destinationResult.status === 'fulfilled') {
+        setDestinations(destinationResult.value.map((destination) => ({
+          ...destination,
+          title: destination.country
+            ? `${destination.name}, ${destination.country}`
+            : destination.name,
+          desc: destination.description || '',
+          img: destination.image || '',
+          avgCost: destination.average_daily_cost == null
+            ? ''
+            : `${destination.average_daily_cost} ${destination.currency || ''}/day avg`.trim(),
+          type: 'Destinations',
+        })));
+      } else {
+        setDestinations([]);
+        setDestinationsError(
+          destinationResult.reason instanceof Error
+            ? destinationResult.reason.message
+            : 'Could not load destinations.',
+        );
+      }
+      setDestinationsLoading(false);
+
+      if (placesResult.status === 'fulfilled') {
+        const destinationNames = new Map(
+          destinationResult.status === 'fulfilled'
+            ? destinationResult.value.map((destination) => [
+                String(destination.id),
+                [destination.name, destination.country].filter(Boolean).join(', '),
+              ])
+            : [],
+        );
+        setRecommendations(placesResult.value.map((place) => ({
+          ...place,
+          kind: 'place',
+          title: place.name,
+          desc: place.description || '',
+          location:
+            destinationNames.get(String(place.destination_id)) ||
+            place.address ||
+            '',
+          img: place.image || '',
+        })));
+      } else {
+        setRecommendations([]);
+        setRecommendationsError(
+          placesResult.reason instanceof Error
+            ? placesResult.reason.message
+            : 'Could not load recommended places.',
+        );
+      }
+      setRecommendationsLoading(false);
     }
 
-    loadData();
+    void loadData();
 
     return () => {
       cancelled = true;
     };
-  }, []);
-  const safeSavedPlaces = Array.isArray(savedPlaces) ? savedPlaces : [];
-  const isSaved = (id) => safeSavedPlaces.includes(id);
+  }, [reloadKey]);
 
-  const toggleSave = (id) => {
-    onToggleSave(id);
-  };
+  function retryLoad() {
+    setDestinationsLoading(true);
+    setRecommendationsLoading(true);
+    setDestinationsError('');
+    setRecommendationsError('');
+    setReloadKey((key) => key + 1);
+  }
+
+  const safeSavedPlaces = Array.isArray(savedPlaces) ? savedPlaces : [];
+  const isSaved = (id) =>
+    safeSavedPlaces.some((savedId) => String(savedId) === String(id));
 
   const openDestinationSearch = () => {
     const query = searchQuery.trim();
@@ -105,7 +164,7 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
         <div className="relative z-10 max-w-3xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold border border-teal-500/30">
             <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-            NEXT-GEN TRAVEL ENGINE v2.0
+          TRIPOS TRAVEL WORKSPACE
           </div>
           
           
@@ -120,7 +179,7 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
           {/* Search Box */}
           <div className="mt-6 bg-white rounded-2xl p-3 text-slate-800 shadow-2xl space-y-3 text-left">
             <div className="flex items-center gap-1 border-b border-slate-100 pb-2 overflow-x-auto text-xs font-semibold">
-              {['All', 'Destinations', 'Attractions', 'Hotels', 'Food'].map(tab => (
+              {['All', 'Destinations'].map(tab => (
                 <button
                   key={tab}
                   type="button"
@@ -156,16 +215,20 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
               <div className="md:col-span-3 flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
                 <IconCalendar />
                 <div>
-                  <div className="text-[9px] uppercase font-bold text-slate-400">WHEN</div>
-                  <div className="text-xs font-semibold text-slate-700">Oct 14 – Oct 28</div>
+                  <div className="text-[9px] uppercase font-bold text-slate-400">DESTINATIONS</div>
+                  <div className="text-xs font-semibold text-slate-700">
+                    {destinationsLoading ? 'Loading…' : destinations.length}
+                  </div>
                 </div>
               </div>
 
               <div className="md:col-span-3 flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
                 <IconUsers />
                 <div>
-                  <div className="text-[9px] uppercase font-bold text-slate-400">WHO</div>
-                  <div className="text-xs font-semibold text-slate-700">2 Guests</div>
+                  <div className="text-[9px] uppercase font-bold text-slate-400">PLACES TO VISIT</div>
+                  <div className="text-xs font-semibold text-slate-700">
+                    {recommendationsLoading ? 'Loading…' : recommendations.length}
+                  </div>
                 </div>
               </div>
 
@@ -203,13 +266,13 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="text-xs font-bold text-teal-600 tracking-wider">01 // TOP HITS</div>
-            <h2 className="text-xl font-black text-slate-800">Popular Destinations</h2>
+            <div className="text-xs font-bold text-teal-600 tracking-wider">01 // DESTINATIONS</div>
+            <h2 className="text-xl font-black text-slate-800">Destinations</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              aria-label="Scroll to the first popular destination"
+              aria-label="Scroll to the first destination"
               onClick={() => seekPopularDestinations(false)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
             >
@@ -217,7 +280,7 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
             </button>
             <button
               type="button"
-              aria-label="Scroll to the last popular destination"
+              aria-label="Scroll to the last destination"
               onClick={() => seekPopularDestinations(true)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
             >
@@ -235,17 +298,30 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
 
         <div
           ref={popularDestinationsRef}
-          aria-label="Popular destinations"
+          aria-label="Destinations"
           className="relative flex w-full min-w-0 overflow-x-auto pb-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
         >
           <div ref={popularDestinationsTrackRef} className="popular-destinations-track">
             <div ref={popularDestinationsGroupRef} className="flex w-max shrink-0 gap-4 pr-4">
-              {filteredDestinations.map(item => (
+              {destinationsLoading ? (
+                <p className="py-8 text-sm text-slate-500" role="status">
+                  Loading destinations…
+                </p>
+              ) : destinationsError ? (
+                <div className="py-6 text-sm text-red-700" role="alert">
+                  <p>{destinationsError}</p>
+                  <button
+                    className="mt-2 font-semibold underline"
+                    onClick={retryLoad}
+                    type="button"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredDestinations.length > 0 ? filteredDestinations.map(item => (
                 <div key={item.id} className="w-[min(85vw,19rem)] shrink-0">
                   <DestinationCard 
                     item={item}
-                    isSaved={isSaved(item.id)}
-                    onToggleSave={toggleSave}
                     onAddToTrips={() =>
                       navigate('/trips', { state: { addDestination: item } })
                     }
@@ -256,16 +332,20 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
                     }
                   />
                 </div>
-              ))}
+              )) : (
+                <p className="py-8 text-sm text-slate-500">
+                  No destinations are available yet.
+                </p>
+              )}
             </div>
             <div
               aria-hidden="true"
               inert
               className="flex w-max shrink-0 gap-4 pr-4"
             >
-              {filteredDestinations.map(item => (
+              {!destinationsLoading && !destinationsError && filteredDestinations.map(item => (
                 <div key={`duplicate-${item.id}`} className="w-[min(85vw,19rem)] shrink-0">
-                  <DestinationCard item={item} isSaved={isSaved(item.id)} />
+                  <DestinationCard item={item} />
                 </div>
               ))}
             </div>
@@ -296,15 +376,37 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
       {/* Recommended Places */}
       <section className="space-y-4">
         <div>
-          <div className="text-xs font-bold text-teal-600 tracking-wider">02 // ATTRACTION HIGHLIGHTS</div>
-          <h2 className="text-xl font-black text-slate-800">Recommended Places to Visit</h2>
+          <div className="text-xs font-bold text-teal-600 tracking-wider">02 // PLACES</div>
+          <h2 className="text-xl font-black text-slate-800">Places to Visit</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {recommendationsLoading ? (
+          <p className="py-8 text-sm text-slate-500" role="status">
+            Loading recommended places…
+          </p>
+        ) : recommendationsError ? (
+          <div className="py-6 text-sm text-red-700" role="alert">
+            <p>{recommendationsError}</p>
+            <button
+              className="mt-2 font-semibold underline"
+              onClick={retryLoad}
+              type="button"
+            >
+              Retry
+            </button>
+          </div>
+        ) : recommendations.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {recommendations.map(place => (
             <PlaceCard
               key={place.id}
               place={place}
+              isSaved={isSaved(place.id)}
+              onToggleSave={onToggleSave}
+              showSave={canSavePlaces}
+              isSaving={savingPlaceIds.some(
+                (savingId) => String(savingId) === String(place.id),
+              )}
               onAddToTrips={() =>
                 navigate('/trips', { state: { addDestination: place } })
               }
@@ -315,7 +417,12 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
               }
             />
           ))}
-        </div>
+          </div>
+        ) : (
+          <p className="py-8 text-sm text-slate-500">
+            No recommended places are available yet.
+          </p>
+        )}
       </section>
 
     </div>
