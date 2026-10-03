@@ -6,8 +6,6 @@ import {
 } from '../../services/api/destinationservices';
 import DestinationCard, { 
   PlaceCard, 
-  POPULAR_DESTINATIONS, 
-  RECOMMENDED_PLACES,
   IconSearch,
   IconCalendar,
   IconUsers,
@@ -15,7 +13,42 @@ import DestinationCard, {
   IconSparkles,
   IconChevronRight
 } from '../../features/discovery/page/components/DestinationCard';
-import { withFallbackDestinations } from '../../features/discovery/page/destinationCatalog';
+
+function getApiItems(response, key) {
+  if (Array.isArray(response)) return response;
+  const items =
+    response?.[key] ||
+    response?.results ||
+    response?.items ||
+    response?.data;
+  return Array.isArray(items) ? items : null;
+}
+
+function normalizePlace(item, destinationById = new Map()) {
+  const cost = Number(item.average_daily_cost ?? item.averageDailyCost ?? item.dailyCost);
+  const destination = destinationById.get(String(item.destination_id));
+  return {
+    ...item,
+    id: String(item.id ?? item.destination_id ?? item.name),
+    title: item.title || item.name || 'Untitled destination',
+    desc: item.desc || item.description || '',
+    img:
+      item.img ||
+      item.image ||
+      item.imageUrl ||
+      item.image_path ||
+      destination?.image,
+    avgCost: Number.isFinite(cost) && cost > 0
+      ? `$${Math.round(cost)}/day avg`
+      : item.avgCost || '',
+    location:
+      item.location ||
+      [item.city, item.country || destination?.country]
+        .filter(Boolean)
+        .join(', '),
+    tags: Array.isArray(item.tags) ? item.tags : [],
+  };
+}
 
 export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
   const navigate = useNavigate();
@@ -26,34 +59,69 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Data & Loading States
-  const [destinations, setDestinations] = useState(POPULAR_DESTINATIONS);
-  const [recommendations, setRecommendations] = useState(RECOMMENDED_PLACES);
+  const [destinations, setDestinations] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [isLoadingDestinations, setIsLoadingDestinations] = useState(true);
+  const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);
+  const [destinationsLoadError, setDestinationsLoadError] = useState('');
+  const [placesLoadError, setPlacesLoadError] = useState('');
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   
   useEffect(() => {
     let cancelled = false;
 
     async function loadData() {
-      const [apiDestinations, apiPlaces] = await Promise.all([
+      setIsLoadingDestinations(true);
+      setIsLoadingPlaces(true);
+      setDestinationsLoadError('');
+      setPlacesLoadError('');
+
+      const [destinationsResponse, placesResponse] = await Promise.all([
         getDestinations(100),
-        getRecommendedPlaces(100),
+        getRecommendedPlaces(3),
       ]);
 
       if (cancelled) return;
 
-      setDestinations(withFallbackDestinations(apiDestinations));
-      setRecommendations(
-        Array.isArray(apiPlaces) && apiPlaces.length > 0
-          ? apiPlaces
-          : RECOMMENDED_PLACES,
+      const apiDestinations = getApiItems(destinationsResponse, 'destinations');
+      const apiPlaces = getApiItems(placesResponse, 'places');
+      const destinationById = new Map(
+        (apiDestinations || []).map((destination) => [
+          String(destination.id),
+          destination,
+        ]),
       );
+
+      if (apiDestinations) {
+        setDestinations(
+          apiDestinations.map((destination) => normalizePlace(destination)),
+        );
+      } else {
+        setDestinations([]);
+        setDestinationsLoadError(
+          `Could not load destinations: ${destinationsResponse?.error || 'The API returned an invalid response.'}`,
+        );
+      }
+      if (apiPlaces) {
+        setRecommendations(
+          apiPlaces.map((place) => normalizePlace(place, destinationById)),
+        );
+      } else {
+        setRecommendations([]);
+        setPlacesLoadError(
+          `Could not load places: ${placesResponse?.error || 'The API returned an invalid response.'}`,
+        );
+      }
+      setIsLoadingDestinations(false);
+      setIsLoadingPlaces(false);
     }
 
-    loadData();
+    void loadData();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [catalogReloadKey]);
   const safeSavedPlaces = Array.isArray(savedPlaces) ? savedPlaces : [];
   const isSaved = (id) => safeSavedPlaces.includes(id);
 
@@ -258,6 +326,20 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
                 </div>
               ))}
             </div>
+            {!isLoadingDestinations && filteredDestinations.length === 0 && (
+              <p className="px-4 py-8 text-sm text-slate-500">
+                {destinationsLoadError || 'No destinations are available yet.'}
+                {destinationsLoadError && (
+                  <button
+                    type="button"
+                    onClick={() => setCatalogReloadKey((key) => key + 1)}
+                    className="ml-2 font-semibold text-teal-700 underline"
+                  >
+                    Retry
+                  </button>
+                )}
+              </p>
+            )}
             <div
               aria-hidden="true"
               inert
@@ -315,6 +397,20 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
               }
             />
           ))}
+          {!isLoadingPlaces && recommendations.length === 0 && (
+            <p className="text-sm text-slate-500">
+              {placesLoadError || 'No recommended places are available yet.'}
+              {placesLoadError && (
+                <button
+                  type="button"
+                  onClick={() => setCatalogReloadKey((key) => key + 1)}
+                  className="ml-2 font-semibold text-teal-700 underline"
+                >
+                  Retry
+                </button>
+              )}
+            </p>
+          )}
         </div>
       </section>
 

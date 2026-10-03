@@ -1,15 +1,17 @@
 
 
 import { useNavigate } from 'react-router-dom';
-import DestinationCard, {
-  POPULAR_DESTINATIONS,
-} from '../../features/discovery/page/components/DestinationCard';
+import DestinationCard from '../../features/discovery/page/components/DestinationCard';
 
-function Saved({ savedPlaces = [], onToggleSave = () => {} }) {
+function Saved({
+  savedPlaces = [],
+  savedPlaceDetails = {},
+  onToggleSave = () => {},
+}) {
   const navigate = useNavigate();
-  const places = POPULAR_DESTINATIONS.filter((place) =>
-    savedPlaces.includes(place.id),
-  );
+  const places = savedPlaces
+    .map((placeId) => savedPlaceDetails[placeId])
+    .filter(Boolean);
 
   return (
     <div className="min-h-full bg-slate-50 p-5 text-slate-800 sm:p-8">

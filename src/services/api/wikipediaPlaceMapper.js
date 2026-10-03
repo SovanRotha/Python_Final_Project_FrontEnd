@@ -32,7 +32,7 @@ export function mapWikipediaPage(page) {
       title: page.title,
       desc: page.extract || '',
     }),
-    tags: ['Wikipedia'],
+    tags: [],
     category: placeType,
     type: placeType,
     source: 'Wikipedia',

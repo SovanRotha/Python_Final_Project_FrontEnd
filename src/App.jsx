@@ -12,13 +12,19 @@ import Notification from './screen/userScreen/notification';
 import PlacePage from './features/discovery/page/PlacePage';
 
 export default function UserPage() {
-  const [savedPlaces, setSavedPlaces] = useState([]);
+  const [savedPlaceRecords, setSavedPlaceRecords] = useState([]);
+  const savedPlaces = savedPlaceRecords.map((place) => place.id);
+  const savedPlaceDetails = Object.fromEntries(
+    savedPlaceRecords.map((place) => [place.id, place]),
+  );
 
-  const handleToggleSave = (placeId) => {
-    setSavedPlaces((current) =>
-      current.includes(placeId)
-        ? current.filter((id) => id !== placeId)
-        : [...current, placeId],
+  const handleToggleSave = (place) => {
+    if (!place || typeof place !== 'object' || place.id == null) return;
+
+    setSavedPlaceRecords((current) =>
+      current.some((savedPlace) => savedPlace.id === place.id)
+        ? current.filter((savedPlace) => savedPlace.id !== place.id)
+        : [...current, place],
     );
   };
 
@@ -59,6 +65,7 @@ export default function UserPage() {
             element={
               <Saved
                 savedPlaces={savedPlaces}
+                savedPlaceDetails={savedPlaceDetails}
                 onToggleSave={handleToggleSave}
               />
             }

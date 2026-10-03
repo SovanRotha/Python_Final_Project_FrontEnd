@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  POPULAR_DESTINATIONS,
-  RECOMMENDED_PLACES,
-} from './components/DestinationCard';
-import {
   getDestinationById,
   getRecommendedPlaces,
 } from '../../../services/api/destinationservices';
@@ -50,15 +46,14 @@ export default function PlacePage({ savedPlaces = [], onToggleSave = () => {} })
         return;
       }
 
-      const places = await getRecommendedPlaces();
+      const placesResponse = await getRecommendedPlaces();
       if (!isMounted) return;
 
-      const localPlace = [
-        ...(Array.isArray(places) ? places : []),
-        ...POPULAR_DESTINATIONS,
-        ...RECOMMENDED_PLACES,
-      ].find((place) => String(place.id) === placeId);
-      setLoadedPlace({ placeId, destination: localPlace || null });
+      const places = Array.isArray(placesResponse)
+        ? placesResponse
+        : placesResponse?.places || placesResponse?.results || placesResponse?.data || [];
+      const place = places.find((item) => String(item.id) === placeId);
+      setLoadedPlace({ placeId, destination: place || null });
     }
 
     loadDestination();
@@ -222,7 +217,7 @@ export default function PlacePage({ savedPlaces = [], onToggleSave = () => {} })
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
               <button
                 type="button"
-                onClick={() => onToggleSave(destination.id)}
+                onClick={() => onToggleSave(destination)}
                 className={`rounded-2xl border px-6 py-3 text-sm font-bold transition ${
                   isSaved
                     ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'

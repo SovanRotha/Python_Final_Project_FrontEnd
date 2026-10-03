@@ -6,22 +6,6 @@ import {
 import { isEarthPlace } from './wikipediaPlaceMapper.js';
 
 const countrySearchCache = new Map();
-const COUNTRY_ALIASES = new Map([
-  ['america', 'United States'],
-  ['u s', 'United States'],
-  ['u.s.', 'United States'],
-  ['us', 'United States'],
-  ['u.s.a.', 'United States'],
-  ['usa', 'United States'],
-  ['united states of america', 'United States'],
-  ['uk', 'United Kingdom'],
-  ['u.k.', 'United Kingdom'],
-  ['great britain', 'United Kingdom'],
-  ['uae', 'United Arab Emirates'],
-  ['south korea', 'South Korea'],
-  ['north korea', 'North Korea'],
-  ['russia', 'Russia'],
-]);
 const NON_DESTINATION_ENTITY_TYPES = new Set([
   'Q7278',
   'Q56061',
@@ -33,6 +17,15 @@ const NON_DESTINATION_ENTITY_TYPES = new Set([
   'Q7188',
   'Q15925198',
 ]);
+
+function normalizeCountryName(name) {
+  return name
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
 
 function isPoliticalArticle(page, entities) {
   const title = page.title.trim();
@@ -54,18 +47,12 @@ function isPoliticalArticle(page, entities) {
 }
 
 export async function findCountry(query, signal) {
-  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const normalizedQuery = normalizeCountryName(query.trim());
   if (countrySearchCache.has(normalizedQuery)) {
     return countrySearchCache.get(normalizedQuery);
   }
 
-  const canonicalName = COUNTRY_ALIASES.get(normalizedQuery) || query.trim();
-  const normalizedCanonicalName = canonicalName.toLocaleLowerCase();
-  const searchPromise = fetchCountry(
-    canonicalName,
-    normalizedCanonicalName,
-    signal,
-  );
+  const searchPromise = fetchCountry(query.trim(), normalizedQuery, signal);
   countrySearchCache.set(normalizedQuery, searchPromise);
 
   try {
@@ -82,7 +69,7 @@ async function fetchCountry(query, normalizedQuery, signal) {
     search: query,
     language: 'en',
     type: 'item',
-    limit: '10',
+    limit: '50',
     format: 'json',
     origin: '*',
   });
@@ -95,7 +82,8 @@ async function fetchCountry(query, normalizedQuery, signal) {
   const data = await response.json();
   const country = data.search?.find(
     (item) =>
-      item.label?.trim().toLocaleLowerCase() === normalizedQuery &&
+      (normalizeCountryName(item.label || '') === normalizedQuery ||
+        item.match?.type === 'alias') &&
       /\bcountry\b|\bsovereign state\b|\bisland nation\b/i.test(
         item.description || '',
       ),
