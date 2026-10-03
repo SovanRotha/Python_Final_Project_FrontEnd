@@ -31,7 +31,9 @@ function Saved({ savedPlaces = [], onToggleSave = () => {} }) {
                 item={place}
                 isSaved
                 onToggleSave={onToggleSave}
-                onBuildItinerary={() => navigate('/trips')}
+                onAddToTrips={() =>
+                  navigate('/trips', { state: { addDestination: place } })
+                }
               />
             ))}
           </div>

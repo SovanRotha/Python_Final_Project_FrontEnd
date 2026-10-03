@@ -88,6 +88,138 @@ export const POPULAR_DESTINATIONS = [
     tags: ['SCENERY', 'ROMANCE', 'LUXURY'],
     img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=800&q=80',
     type: 'Coastal'
+  },
+  {
+    id: 'paris',
+    title: 'Paris, France',
+    avgCost: '$145/day avg',
+    rating: '4.8',
+    reviews: '28k reviews',
+    desc: 'Iconic boulevards, world-class museums, historic landmarks, and neighborhood cafes.',
+    tags: ['CULTURE', 'FOOD', 'HISTORY'],
+    img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80',
+    type: 'City'
+  },
+  {
+    id: 'bali',
+    title: 'Bali, Indonesia',
+    avgCost: '$52/day avg',
+    rating: '4.9',
+    reviews: '21k reviews',
+    desc: 'Tropical beaches, emerald rice terraces, and welcoming island culture.',
+    tags: ['BEACH', 'NATURE', 'BUDGET'],
+    img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80',
+    type: 'Coastal'
+  },
+  {
+    id: 'reykjavik',
+    title: 'Reykjavik, Iceland',
+    avgCost: '$135/day avg',
+    rating: '4.8',
+    reviews: '9.7k reviews',
+    desc: 'Use the lively capital as a base for waterfalls, hot springs, and northern lights.',
+    tags: ['NATURE', 'SCENERY', 'ADVENTURE'],
+    img: 'https://images.unsplash.com/photo-1504829857797-ddff29c27927?auto=format&fit=crop&w=800&q=80',
+    type: 'City'
+  },
+  {
+    id: 'new-york',
+    title: 'New York City, USA',
+    avgCost: '$190/day avg',
+    rating: '4.8',
+    reviews: '36k reviews',
+    desc: 'A vibrant mix of skyline views, Broadway shows, museums, and food from everywhere.',
+    tags: ['CITY', 'CULTURE', 'FOOD'],
+    img: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?auto=format&fit=crop&w=800&q=80',
+    type: 'City'
+  },
+  {
+    id: 'marrakech',
+    title: 'Marrakech, Morocco',
+    avgCost: '$65/day avg',
+    rating: '4.7',
+    reviews: '12k reviews',
+    desc: 'Explore colorful souks, tranquil gardens, and the historic medina.',
+    tags: ['CULTURE', 'HISTORY', 'BUDGET'],
+    img: 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?auto=format&fit=crop&w=800&q=80',
+    type: 'City'
+  },
+  {
+    id: 'swiss-alps',
+    title: 'Swiss Alps, Switzerland',
+    avgCost: '$175/day avg',
+    rating: '4.9',
+    reviews: '8.4k reviews',
+    desc: 'Mountain railways, alpine villages, and unforgettable hiking and ski trails.',
+    tags: ['NATURE', 'SCENERY', 'ADVENTURE'],
+    img: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=800&q=80',
+    type: 'Nature'
+  },
+  {
+    id: 'singapore',
+    title: 'Singapore',
+    avgCost: '$115/day avg',
+    rating: '4.8',
+    reviews: '14k reviews',
+    desc: 'Discover futuristic gardens, lively waterfronts, and renowned hawker food.',
+    tags: ['CITY', 'FOOD', 'CULTURE'],
+    img: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=800&q=80',
+    type: 'City'
+  },
+  {
+    id: 'petra',
+    title: 'Petra, Jordan',
+    avgCost: '$85/day avg',
+    rating: '4.9',
+    reviews: '7.1k reviews',
+    desc: 'Walk through the rose-red canyon to discover the remarkable ancient city.',
+    tags: ['HISTORY', 'CULTURE', 'ADVENTURE'],
+    img: 'https://images.unsplash.com/photo-1579606032821-4e6161c81bd3?auto=format&fit=crop&w=800&q=80',
+    type: 'Historical'
+  },
+  {
+    id: 'santorini',
+    title: 'Santorini, Greece',
+    avgCost: '$130/day avg',
+    rating: '4.8',
+    reviews: '10.5k reviews',
+    desc: 'Whitewashed villages, blue-domed churches, and sunset views over the Aegean.',
+    tags: ['BEACH', 'SCENERY', 'CULTURE'],
+    img: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?auto=format&fit=crop&w=800&q=80',
+    type: 'Coastal'
+  },
+  {
+    id: 'cape-town',
+    title: 'Cape Town, South Africa',
+    avgCost: '$90/day avg',
+    rating: '4.8',
+    reviews: '9.2k reviews',
+    desc: 'Pair dramatic Table Mountain views with beaches, vineyards, and coastal drives.',
+    tags: ['NATURE', 'BEACH', 'ADVENTURE'],
+    img: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=800&q=80',
+    type: 'Coastal'
+  },
+  {
+    id: 'banff',
+    title: 'Banff, Canada',
+    avgCost: '$120/day avg',
+    rating: '4.9',
+    reviews: '6.8k reviews',
+    desc: 'Turquoise lakes, pine forests, and scenic trails in the Canadian Rockies.',
+    tags: ['NATURE', 'SCENERY', 'HIKING'],
+    img: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
+    type: 'Nature'
+  },
+  {
+    id: 'seoul',
+    title: 'Seoul, South Korea',
+    avgCost: '$88/day avg',
+    rating: '4.8',
+    reviews: '16k reviews',
+    desc: 'Historic palaces, late-night markets, contemporary art, and Korean cuisine.',
+    tags: ['CITY', 'CULTURE', 'FOOD'],
+    img: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?auto=format&fit=crop&w=800&q=80',
+    type: 'City'
   }
 ];
 
@@ -99,7 +231,7 @@ export const RECOMMENDED_PLACES = [
     location: 'Bangkok, Thailand',
     desc: 'One of Bangkok\'s oldest sanctuary complexes, home to the 46m gilded Buddha.',
     tags: ['CULTURE', 'ARCHITECTURE', 'MUST-SEE'],
-    img: 'https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=800&q=80'
+    img: 'https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'fushimi-inari',
@@ -108,7 +240,7 @@ export const RECOMMENDED_PLACES = [
     location: 'Kyoto, Japan',
     desc: 'Iconic network of thousands of vermilion torii gates winding up Mount Inari.',
     tags: ['NATURE', 'SPIRITUAL', 'FREE'],
-    img: 'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=800&q=80'
+    img: 'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'marble-mountains',
@@ -117,38 +249,93 @@ export const RECOMMENDED_PLACES = [
     location: 'Da Nang, Vietnam',
     desc: 'Cluster of five marble and limestone hills featuring hidden Buddhist grottoes.',
     tags: ['HIKING', 'VIEWS', 'CAVES'],
-    img: 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=800&q=80'
+    img: 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=800&q=80',
   }
 ];
 
 // Popular Destination Card
-export default function DestinationCard({ item, isSaved, onToggleSave, onBuildItinerary }) {
+export default function DestinationCard({
+  item,
+  isSaved,
+  onToggleSave,
+  onAddToTrips,
+  onClick,
+}) {
   if (!item) return null;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition group">
-      <div className="relative h-44 overflow-hidden">
-        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[11px] font-semibold">
-          {item.avgCost}
-        </div>
+    <div
+      role={onClick ? 'link' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `View details for ${item.title || item.name}` : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (event) => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      className={`bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition group ${
+        onClick ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600' : ''
+      }`}
+    >
+      <div className="relative min-h-48 overflow-hidden bg-linear-to-br from-teal-900 via-teal-800 to-slate-900 p-5 text-white">
+        {item.img && (
+          <img
+            src={item.img}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-900/20 to-slate-900/20" />
+        {item.avgCost && (
+          <div className="absolute left-4 top-4 z-10 rounded-full bg-slate-950/60 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm">
+            {item.avgCost}
+          </div>
+        )}
         <button 
           type="button"
-          onClick={() => onToggleSave(item.id)}
-          className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition ${
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleSave(item.id);
+          }}
+          aria-label={isSaved ? 'Remove saved place' : 'Save place'}
+          className={`absolute right-4 top-4 z-10 rounded-full p-2 backdrop-blur-md transition ${
             isSaved ? 'bg-red-500 text-white' : 'bg-white/80 text-slate-700 hover:bg-white'
           }`}
         >
           <IconHeart active={isSaved} />
         </button>
-        <div className="absolute bottom-3 left-3 bg-teal-900/80 backdrop-blur-md text-teal-200 px-2.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
-          <span className="text-amber-400">★</span> {item.rating} ({item.reviews})
+        <div className="relative z-10 pt-10">
+          {item.category && (
+            <p className="text-[10px] font-bold uppercase tracking-wide text-teal-200">
+              {item.category}
+            </p>
+          )}
+          {item.location && (
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-teal-100/80">
+              {item.location}
+            </p>
+          )}
+          <h3 className="mt-2 text-lg font-bold">{item.title || item.name}</h3>
         </div>
+        {(item.rating || item.reviews) && (
+          <div className="mt-3 flex items-center gap-1 text-xs font-medium text-teal-100">
+            {item.rating && <span className="text-amber-400">★</span>}
+            {item.rating}
+            {item.reviews && ` (${item.reviews})`}
+          </div>
+        )}
       </div>
 
       <div className="p-4 space-y-2">
-        <h3 className="font-bold text-slate-800 text-base">{item.title}</h3>
-        <p className="text-slate-500 text-xs line-clamp-2">{item.desc}</p>
+        <p className="text-slate-500 text-xs line-clamp-2">{item.desc || item.description}</p>
         
         <div className="flex flex-wrap gap-1 pt-1 pb-2">
           {item.tags?.map(tag => (
@@ -158,34 +345,82 @@ export default function DestinationCard({ item, isSaved, onToggleSave, onBuildIt
           ))}
         </div>
 
-        <button 
-          type="button"
-          onClick={onBuildItinerary}
-          className="w-full py-2 bg-slate-50 hover:bg-teal-50 text-teal-700 font-semibold text-xs rounded-xl border border-slate-200 hover:border-teal-200 transition flex items-center justify-center gap-1"
-        >
-          Build Itinerary <IconSparkles />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onAddToTrips();
+            }}
+            className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-semibold text-teal-700 transition hover:border-teal-200 hover:bg-teal-50"
+          >
+            Add to My Trips <IconSparkles />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 // Recommended Place Card
-export function PlaceCard({ place }) {
+export function PlaceCard({ place, onClick, onAddToTrips }) {
   if (!place) return null;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
-      <div className="relative h-40">
-        <img src={place.img} alt={place.title} className="w-full h-full object-cover" />
-        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-          {place.category}
+    <div
+      role={onClick ? 'link' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `View details for ${place.title || place.name}` : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (event) => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      className={`bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm ${
+        onClick ? 'cursor-pointer transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600' : ''
+      }`}
+    >
+      <div className="relative min-h-48 overflow-hidden bg-linear-to-br from-teal-900 via-teal-800 to-slate-900 p-5 text-white">
+        {place.img && (
+          <img
+            src={place.img}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-900/20 to-slate-900/20" />
+        <div className="relative z-10">
+        <div className="text-[10px] font-bold uppercase tracking-wide text-teal-200">
+          {place.category || place.type}
+        </div>
+        {place.location && (
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-teal-100/80">
+            {place.location}
+          </p>
+        )}
+        <h3 className="mt-2 text-lg font-bold">{place.title || place.name}</h3>
         </div>
       </div>
       <div className="p-4 space-y-1">
-        <div className="text-[11px] text-slate-400 font-semibold">{place.location}</div>
-        <h3 className="font-bold text-slate-800 text-sm">{place.title}</h3>
-        <p className="text-xs text-slate-500">{place.desc}</p>
+        <p className="text-xs text-slate-500">{place.desc || place.description}</p>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onAddToTrips();
+          }}
+          className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-semibold text-teal-700 transition hover:border-teal-200 hover:bg-teal-50"
+        >
+          Add to My Trips
+        </button>
       </div>
     </div>
   );

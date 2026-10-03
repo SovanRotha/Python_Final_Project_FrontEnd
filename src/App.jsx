@@ -9,6 +9,7 @@ import Trip from './screen/userScreen/trip';
 import Budget from './screen/userScreen/budget';
 import AIAssistant from './screen/userScreen/ai_assistant';
 import Notification from './screen/userScreen/notification';
+import PlacePage from './features/discovery/page/PlacePage';
 
 export default function UserPage() {
   const [savedPlaces, setSavedPlaces] = useState([]);
@@ -39,6 +40,15 @@ export default function UserPage() {
             path="/explore"
             element={
               <Explore
+                savedPlaces={savedPlaces}
+                onToggleSave={handleToggleSave}
+              />
+            }
+          />
+          <Route
+            path="/places/:placeId"
+            element={
+              <PlacePage
                 savedPlaces={savedPlaces}
                 onToggleSave={handleToggleSave}
               />

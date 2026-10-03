@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDestinations, getRecommendedPlaces } from '../../services/api/destinationapi';
+import {
+  getDestinations,
+  getRecommendedPlaces,
+} from '../../services/api/destinationservices';
 import DestinationCard, { 
   PlaceCard, 
   POPULAR_DESTINATIONS, 
@@ -12,9 +15,13 @@ import DestinationCard, {
   IconSparkles,
   IconChevronRight
 } from '../../features/discovery/page/components/DestinationCard';
+import { withFallbackDestinations } from '../../features/discovery/page/destinationCatalog';
 
 export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
   const navigate = useNavigate();
+  const popularDestinationsRef = useRef(null);
+  const popularDestinationsGroupRef = useRef(null);
+  const popularDestinationsTrackRef = useRef(null);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -27,17 +34,13 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
 
     async function loadData() {
       const [apiDestinations, apiPlaces] = await Promise.all([
-        getDestinations(),
-        getRecommendedPlaces(),
+        getDestinations(100),
+        getRecommendedPlaces(100),
       ]);
 
       if (cancelled) return;
 
-      setDestinations(
-        Array.isArray(apiDestinations) && apiDestinations.length > 0
-          ? apiDestinations
-          : POPULAR_DESTINATIONS,
-      );
+      setDestinations(withFallbackDestinations(apiDestinations));
       setRecommendations(
         Array.isArray(apiPlaces) && apiPlaces.length > 0
           ? apiPlaces
@@ -58,12 +61,41 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
     onToggleSave(id);
   };
 
+  const openDestinationSearch = () => {
+    const query = searchQuery.trim();
+    navigate(query ? `/explore?search=${encodeURIComponent(query)}` : '/explore');
+  };
+
   const filteredDestinations = destinations.filter(item => {
     const matchesSearch = item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.desc?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === 'All' || item.type?.toLowerCase() === activeTab.toLowerCase();
     return matchesSearch && matchesTab;
   });
+
+  const seekPopularDestinations = (toEnd) => {
+    const carousel = popularDestinationsRef.current;
+    const group = popularDestinationsGroupRef.current;
+    const animation = popularDestinationsTrackRef.current
+      ?.getAnimations()
+      .find((item) => item.playState !== 'finished');
+
+    if (animation && group) {
+      const duration = Number(animation.effect?.getTiming().duration);
+      const endProgress = Math.max(
+        0,
+        (group.offsetWidth - carousel.clientWidth) /
+          (group.offsetWidth * 2),
+      );
+      animation.currentTime = toEnd ? duration * endProgress : 0;
+      return;
+    }
+
+    carousel?.scrollTo({
+      left: toEnd ? carousel.scrollWidth : 0,
+      behavior: 'smooth',
+    });
+  };
 
   return (
     <div className="p-6 md:p-8 space-y-8 pb-16 min-h-screen bg-slate-50 text-slate-800">
@@ -107,8 +139,15 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
                 <IconSearch />
                 <input 
                   type="text" 
+                  aria-label="Search destinations"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      openDestinationSearch();
+                    }
+                  }}
                   placeholder="Search destinations... (e.g. China)" 
                   className="bg-transparent w-full text-xs outline-none font-medium text-slate-800"
                 />
@@ -132,7 +171,8 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
 
               <button 
                 type="button"
-                onClick={() => navigate('/explore')}
+                onClick={openDestinationSearch}
+                aria-label="Search destinations"
                 className="md:col-span-1 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex items-center justify-center p-3 transition"
               >
                 <IconArrowRight />
@@ -161,30 +201,75 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
 
       {/* Popular Destinations */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-xs font-bold text-teal-600 tracking-wider">01 // TOP HITS</div>
             <h2 className="text-xl font-black text-slate-800">Popular Destinations</h2>
           </div>
-          <button 
-            type="button"
-            onClick={() => navigate('/explore')}
-            className="text-xs font-bold text-teal-600 hover:text-teal-800 flex items-center gap-1"
-          >
-            View all ({filteredDestinations.length}) <IconChevronRight />
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              aria-label="Scroll to the first popular destination"
+              onClick={() => seekPopularDestinations(false)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
+              Start
+            </button>
+            <button
+              type="button"
+              aria-label="Scroll to the last popular destination"
+              onClick={() => seekPopularDestinations(true)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
+              End
+            </button>
+            <button 
+              type="button"
+              onClick={() => navigate('/explore')}
+              className="flex items-center gap-1 text-xs font-bold text-teal-600 hover:text-teal-800"
+            >
+              View all ({filteredDestinations.length}) <IconChevronRight />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {filteredDestinations.map(item => (
-            <DestinationCard 
-              key={item.id}
-              item={item}
-              isSaved={isSaved(item.id)}
-              onToggleSave={toggleSave}
-              onBuildItinerary={() => navigate('/trips')}
-            />
-          ))}
+        <div
+          ref={popularDestinationsRef}
+          aria-label="Popular destinations"
+          className="relative flex w-full min-w-0 overflow-x-auto pb-3 scrollbar-none [&::-webkit-scrollbar]:hidden"
+        >
+          <div ref={popularDestinationsTrackRef} className="popular-destinations-track">
+            <div ref={popularDestinationsGroupRef} className="flex w-max shrink-0 gap-4 pr-4">
+              {filteredDestinations.map(item => (
+                <div key={item.id} className="w-[min(85vw,19rem)] shrink-0">
+                  <DestinationCard 
+                    item={item}
+                    isSaved={isSaved(item.id)}
+                    onToggleSave={toggleSave}
+                    onAddToTrips={() =>
+                      navigate('/trips', { state: { addDestination: item } })
+                    }
+                    onClick={() =>
+                      navigate(`/places/${encodeURIComponent(String(item.id))}`, {
+                        state: { destination: item },
+                      })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+            <div
+              aria-hidden="true"
+              inert
+              className="flex w-max shrink-0 gap-4 pr-4"
+            >
+              {filteredDestinations.map(item => (
+                <div key={`duplicate-${item.id}`} className="w-[min(85vw,19rem)] shrink-0">
+                  <DestinationCard item={item} isSaved={isSaved(item.id)} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -217,7 +302,18 @@ export default function Home({ savedPlaces = [], onToggleSave = () => {} }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {recommendations.map(place => (
-            <PlaceCard key={place.id} place={place} />
+            <PlaceCard
+              key={place.id}
+              place={place}
+              onAddToTrips={() =>
+                navigate('/trips', { state: { addDestination: place } })
+              }
+              onClick={() =>
+                navigate(`/places/${encodeURIComponent(String(place.id))}`, {
+                  state: { destination: place },
+                })
+              }
+            />
           ))}
         </div>
       </section>

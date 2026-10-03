@@ -1,65 +1,403 @@
-
-
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DestinationCard, {
   POPULAR_DESTINATIONS,
 } from '../../features/discovery/page/components/DestinationCard';
+import { withFallbackDestinations } from '../../features/discovery/page/destinationCatalog';
+import { getDestinations } from '../../services/api/destinationservices';
+import { searchWikipediaPlaces } from '../../services/api/wikipediaPlaces';
+
+const CATEGORIES = ['All', 'Popular', 'Beach', 'Culture', 'Budget Friendly'];
+const DESTINATION_PAGE_SIZE = 50;
 
 function Explore({ savedPlaces = [], onToggleSave = () => {} }) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-  const places = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return POPULAR_DESTINATIONS;
+  const location = useLocation();
+  const initialSearch = new URLSearchParams(location.search).get('search')?.trim() || '';
+  const [query, setQuery] = useState(initialSearch);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  
+  // API State
+  const [destinations, setDestinations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
+  const [requestedLimit, setRequestedLimit] = useState(DESTINATION_PAGE_SIZE);
+  const [onlineResults, setOnlineResults] = useState(null);
+  const [isSearchingOnline, setIsSearchingOnline] = useState(Boolean(initialSearch));
+  const [isLoadingMoreOnline, setIsLoadingMoreOnline] = useState(false);
+  const [onlineSearchError, setOnlineSearchError] = useState('');
+  const [onlineContinuation, setOnlineContinuation] = useState(null);
+  const [onlineCountryName, setOnlineCountryName] = useState(null);
 
-    return POPULAR_DESTINATIONS.filter((place) =>
-      `${place.title} ${place.desc} ${place.tags.join(' ')}`
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      const apiData = await getDestinations(requestedLimit);
+
+      if (isMounted) {
+        const hasCompleteApiCatalog =
+          Array.isArray(apiData) &&
+          apiData.length >= POPULAR_DESTINATIONS.length;
+        setIsUsingFallback(!hasCompleteApiCatalog);
+        setDestinations(withFallbackDestinations(apiData));
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [requestedLimit]);
+
+  const canLoadMore =
+    !isUsingFallback && destinations.length >= requestedLimit;
+
+  async function completeOnlineSearch(searchTerm) {
+    try {
+      const result = await searchWikipediaPlaces(searchTerm);
+      setOnlineResults(result.places);
+      setOnlineContinuation(result.continuation);
+      setOnlineCountryName(result.countryName);
+    } catch (error) {
+      setOnlineSearchError(
+        error instanceof Error ? error.message : 'Online place search failed.',
+      );
+    } finally {
+      setIsSearchingOnline(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!initialSearch) return;
+    void Promise.resolve().then(() => completeOnlineSearch(initialSearch));
+  }, [initialSearch]);
+
+  async function handleOnlineSearch(event) {
+    event.preventDefault();
+    const searchTerm = query.trim();
+    if (!searchTerm) return;
+
+    setIsSearchingOnline(true);
+    setOnlineSearchError('');
+    setOnlineResults(null);
+    setOnlineContinuation(null);
+    setOnlineCountryName(null);
+    await completeOnlineSearch(searchTerm);
+  }
+
+  async function handleLoadMoreOnline() {
+    if (!onlineContinuation || isLoadingMoreOnline) return;
+
+    setIsLoadingMoreOnline(true);
+    setOnlineSearchError('');
+    try {
+      const result = await searchWikipediaPlaces(
+        query.trim(),
+        undefined,
+        onlineContinuation,
+      );
+      setOnlineResults((currentResults) => {
+        const existingIds = new Set(currentResults.map((place) => place.id));
+        return [
+          ...currentResults,
+          ...result.places.filter((place) => !existingIds.has(place.id)),
+        ];
+      });
+      setOnlineContinuation(result.continuation);
+      if (result.countryName) {
+        setOnlineCountryName(result.countryName);
+      }
+    } catch (error) {
+      setOnlineSearchError(
+        error instanceof Error ? error.message : 'Could not load more places.',
+      );
+    } finally {
+      setIsLoadingMoreOnline(false);
+    }
+  }
+
+  const filteredPlaces = useMemo(() => {
+    return destinations.filter((place) => {
+      const title = place.title || place.name || '';
+      const desc = place.desc || place.description || '';
+      const tags = Array.isArray(place.tags) ? place.tags : [];
+      const tagString = tags.join(' ');
+
+      const matchesQuery = `${title} ${desc} ${tagString}`
         .toLowerCase()
-        .includes(normalizedQuery),
-    );
-  }, [query]);
+        .includes(query.trim().toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'All' ||
+        tags.some((tag) => tag.toLowerCase() === selectedCategory.toLowerCase());
+
+      return matchesQuery && matchesCategory;
+    });
+  }, [query, selectedCategory, destinations]);
 
   return (
-    <div className="min-h-full bg-slate-50 p-5 text-slate-800 sm:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
-            Find your next stop
-          </p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">Explore destinations</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Search popular places, compare daily costs, and save your favorites.
-          </p>
+    <div className="min-h-screen bg-slate-50/50 p-6 text-slate-800 sm:p-10">
+      <div className="mx-auto max-w-7xl space-y-8">
+        
+        {/* Banner Header */}
+        <header className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-8 text-white shadow-xl sm:p-12">
+          <div className="relative z-10 max-w-2xl space-y-3">
+            <span className="inline-block rounded-full bg-teal-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-teal-300 backdrop-blur-md">
+              TripOS Discovery
+            </span>
+            <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
+              Explore Destinations
+            </h1>
+            <p className="text-sm text-teal-100/80 sm:text-base">
+              Search popular places, compare daily costs, and click any destination to view full details.
+            </p>
+          </div>
+          <div className="absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
         </header>
-        <label className="block max-w-xl">
-          <span className="sr-only">Search destinations</span>
-          <input
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by place, activity, or tag..."
-          />
-        </label>
-        {places.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {places.map((place) => (
-              <DestinationCard
-                key={place.id}
-                item={place}
-                isSaved={savedPlaces.includes(place.id)}
-                onToggleSave={onToggleSave}
-                onBuildItinerary={() => navigate('/trips')}
+
+        {/* Search & Categories Bar */}
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <form
+              onSubmit={handleOnlineSearch}
+              className="flex w-full max-w-3xl flex-col gap-2 sm:flex-row"
+            >
+              <div className="relative flex-1">
+                <input
+                  aria-label="Search places"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10"
+                  type="search"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setOnlineResults(null);
+                    setOnlineContinuation(null);
+                    setOnlineCountryName(null);
+                    setOnlineSearchError('');
+                  }}
+                  placeholder="Search a place or country..."
+                />
+                <svg
+                  className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <button
+                type="submit"
+                disabled={!query.trim() || isSearchingOnline}
+                className="rounded-2xl bg-teal-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSearchingOnline ? 'Searching…' : 'Search all places'}
+              </button>
+            </form>
+
+            <div className="text-xs font-semibold text-slate-500">
+              Showing{' '}
+              <span className="text-teal-700">
+                {onlineResults ? onlineResults.length : filteredPlaces.length}
+              </span>{' '}
+              {onlineResults ? 'online places' : 'destinations'}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                  selectedCategory === category
+                    ? 'bg-teal-700 text-white shadow-md shadow-teal-700/20'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {onlineSearchError && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+          >
+            {onlineSearchError}
+          </div>
+        )}
+
+        {isSearchingOnline && (
+          <div
+            role="status"
+            className="rounded-2xl border border-teal-100 bg-white px-5 py-4 shadow-sm"
+          >
+            <p className="text-sm font-bold text-slate-800">
+              Searching for {query.trim()} destinations…
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Finding real places, photos, and travel details.
+            </p>
+          </div>
+        )}
+
+        {onlineResults && (
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">
+                  {onlineCountryName
+                    ? `Popular places in ${onlineCountryName}`
+                    : `Online place results for “${query.trim()}”`}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Descriptions come from Wikipedia. Daily budgets are estimates, not live prices.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOnlineResults(null);
+                  setOnlineContinuation(null);
+                  setOnlineCountryName(null);
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Back to destinations
+              </button>
+            </div>
+
+            {onlineResults.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {onlineResults.map((place) => (
+                  <div key={place.id} className="space-y-2">
+                    <DestinationCard
+                      item={place}
+                      isSaved={savedPlaces.includes(place.id)}
+                      onToggleSave={onToggleSave}
+                      onAddToTrips={() =>
+                        navigate('/trips', { state: { addDestination: place } })
+                      }
+                      onClick={() =>
+                        navigate(`/places/${encodeURIComponent(place.id)}`, {
+                          state: { destination: place },
+                        })
+                      }
+                    />
+                    <a
+                      href={place.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-teal-700 underline"
+                    >
+                      Source: Wikipedia
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-600">
+                No online places matched that search. Try a city or landmark name.
+              </div>
+            )}
+
+            {onlineContinuation && (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  disabled={isLoadingMoreOnline}
+                  onClick={handleLoadMoreOnline}
+                  className="rounded-xl border border-teal-200 bg-white px-6 py-3 text-sm font-bold text-teal-700 shadow-sm transition hover:bg-teal-50 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isLoadingMoreOnline ? 'Loading more places…' : 'Load more search results'}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Grid Content */}
+        {onlineResults === null && isLoading ? (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div
+                key={idx}
+                className="h-80 animate-pulse rounded-3xl bg-slate-200/60"
               />
             ))}
           </div>
-        ) : (
-          <p className="rounded-2xl bg-white p-6 text-sm text-slate-500 shadow-sm">
-            No destinations match “{query}”. Try another search.
-          </p>
+        ) : onlineResults === null && isSearchingOnline ? null : onlineResults === null && filteredPlaces.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPlaces.map((place) => (
+              <div
+                key={place.id}
+                className="transition-transform hover:-translate-y-1"
+              >
+                <DestinationCard
+                  item={place}
+                  isSaved={savedPlaces.includes(place.id)}
+                  onToggleSave={onToggleSave}
+                  onAddToTrips={() =>
+                    navigate('/trips', { state: { addDestination: place } })
+                  }
+                  onClick={() =>
+                    navigate(`/places/${encodeURIComponent(String(place.id))}`, {
+                      state: { destination: place },
+                    })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        ) : onlineResults === null ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
+            <p className="text-base font-semibold text-slate-700">No destinations match “{query}”</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Try adjusting your search terms or clearing selected category filters.
+            </p>
+            <button
+              onClick={() => {
+                setQuery('');
+                setSelectedCategory('All');
+              }}
+              className="mt-4 rounded-xl bg-teal-50 px-4 py-2 text-xs font-bold text-teal-700 hover:bg-teal-100"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : null}
+
+        {onlineResults === null && !isLoading && canLoadMore && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              disabled={isLoadingMore}
+              onClick={() => {
+                setIsLoadingMore(true);
+                setRequestedLimit((currentLimit) => currentLimit + DESTINATION_PAGE_SIZE);
+              }}
+              className="rounded-xl border border-teal-200 bg-white px-6 py-3 text-sm font-bold text-teal-700 shadow-sm transition hover:bg-teal-50 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isLoadingMore ? 'Loading more destinations…' : 'Load more destinations'}
+            </button>
+          </div>
         )}
+
       </div>
+
     </div>
   );
 }
