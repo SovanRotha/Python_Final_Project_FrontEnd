@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import TripPlanningPanel from '../../features/trips/components/TripPlanningPanel';
+import accommodationApi from '../../services/api/accommodation_api.js';
+import checklistApi from '../../services/api/check_list_api.js';
+import checklistItemApi from '../../services/api/check_list_item_api.js';
+import packingApi from '../../services/api/packing_api.js';
+import packingListApi from '../../services/api/packing_list_api.js';
+import transportApi from '../../services/api/transport_api.js';
 import {
   getTrips,
   createTrip,
@@ -12,6 +19,16 @@ function Trip() {
   const loadTask = useRef(null);
   const [trips, setTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [tripResources, setTripResources] = useState({
+    accommodations: [],
+    checklists: [],
+    checklistItems: [],
+    packingItems: [],
+    packingLists: [],
+    transports: [],
+    errors: {},
+  });
+  const [isLoadingResources, setIsLoadingResources] = useState(true);
 
   // Modal State for Adding a New Trip
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,6 +40,59 @@ function Trip() {
     imageUrl: '',
     dailyCost: '',
   });
+
+  const loadTripResources = useCallback(async () => {
+    const results = await Promise.allSettled([
+      accommodationApi.list(),
+      checklistApi.list(),
+      checklistItemApi.list(),
+      packingApi.list(),
+      packingListApi.list(),
+      transportApi.list(),
+    ]);
+    const keys = [
+      'accommodations',
+      'checklists',
+      'checklistItems',
+      'packingItems',
+      'packingLists',
+      'transports',
+    ];
+    const nextResources = {
+      accommodations: [],
+      checklists: [],
+      checklistItems: [],
+      packingItems: [],
+      packingLists: [],
+      transports: [],
+      errors: {},
+    };
+
+    results.forEach((result, index) => {
+      const key = keys[index];
+      if (result.status === 'fulfilled') {
+        nextResources[key] = result.value;
+      } else {
+        console.error(`Could not load trip ${key}:`, result.reason);
+        nextResources.errors[key] =
+          result.reason instanceof Error
+            ? result.reason.message
+            : `Could not load ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}.`;
+      }
+    });
+
+    setTripResources(nextResources);
+    setIsLoadingResources(false);
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(loadTripResources);
+  }, [loadTripResources]);
+
+  const reloadTripResources = useCallback(async () => {
+    setIsLoadingResources(true);
+    await loadTripResources();
+  }, [loadTripResources]);
 
   useEffect(() => {
     const destination = location.state?.addDestination;
@@ -181,6 +251,27 @@ function Trip() {
           </p>
         )}
 
+        {Object.entries(tripResources.errors).length > 0 && (
+          <div
+            className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800"
+            role="status"
+          >
+            <p className="font-semibold">
+              Some trip details could not be loaded:
+            </p>
+            {Object.entries(tripResources.errors).map(([key, message]) => (
+              <p key={key}>{message}</p>
+            ))}
+            <button
+              className="mt-1 font-semibold underline underline-offset-2"
+              onClick={() => void reloadTripResources()}
+              type="button"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Content Area */}
         {isLoading ? (
           /* Skeleton Loaders */
@@ -262,6 +353,17 @@ function Trip() {
                         Explore Places →
                       </button>
                     </div>
+                    <TripPlanningPanel
+                      key={trip.id}
+                      onReload={reloadTripResources}
+                      resources={tripResources}
+                      trip={trip}
+                    />
+                    {isLoadingResources && (
+                      <p className="mt-2 text-xs text-slate-400">
+                        Loading trip details…
+                      </p>
+                    )}
                   </div>
                 </div>
               );

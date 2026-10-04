@@ -9,6 +9,7 @@ import Budget from "../../screen/userScreen/budget";
 import AIAssistant from "../../screen/userScreen/ai_assistant";
 import Notification from "../../screen/userScreen/notification";
 import UserSideBar from "../../shared/components/UserSideBar";
+import Memory from "../../screen/userScreen/memory";
 
 function UserPage() {
   const [savedPlaces, setSavedPlaces] = useState([]);
@@ -59,6 +60,7 @@ function UserPage() {
             <Route path="/budget" element={<Budget />} />
             <Route path="/ai" element={<AIAssistant />} />
             <Route path="/notifications" element={<Notification />} />
+            <Route path="/memories" element={<Memory/>} />
           </Routes>
         </main>
       </div>

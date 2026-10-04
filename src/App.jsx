@@ -9,6 +9,7 @@ import Trip from './screen/userScreen/trip';
 import Budget from './screen/userScreen/budget';
 import AIAssistant from './screen/userScreen/ai_assistant';
 import Notification from './screen/userScreen/notification';
+import Memory from './screen/userScreen/memory';
 import PlacePage from './features/discovery/page/PlacePage';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
@@ -253,6 +254,14 @@ function UserPage() {
             element={
               <ProtectedPage>
                 <Notification />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/memories"
+            element={
+              <ProtectedPage>
+                <Memory />
               </ProtectedPage>
             }
           />

@@ -9,6 +9,7 @@ import {
   Bell,
   LogOut,
   LogIn,
+  Images
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -50,6 +51,11 @@ function UserSideBar({ onSignOut, isSignedIn }) {
       name: "Notifications",
       icon: Bell,
       path: "/notifications",
+    },
+    {
+      name: "Memories",
+      icon: Images,
+      path: "/memories",
     },
   ];
 
