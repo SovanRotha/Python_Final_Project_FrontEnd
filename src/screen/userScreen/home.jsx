@@ -4,6 +4,11 @@ import {
   getHomeDestinations,
 } from '../../services/api/homeApi';
 import { fetchPlaces } from '../../services/api/placeapi';
+import {
+  enrichPlacesWithWikipedia,
+  searchWikipediaDestinations,
+  searchWikipediaPlaces,
+} from '../../services/api/wikipediaPlaces';
 import DestinationCard, { 
   PlaceCard, 
   IconSearch,
@@ -60,16 +65,20 @@ export default function Home({
     let cancelled = false;
 
     async function loadData() {
-      const [destinationResult, placesResult] = await Promise.allSettled([
+      const [destinationResult, placesResult, wikipediaResult, wikipediaPlacesResult] = await Promise.allSettled([
         getHomeDestinations(100),
         fetchPlaces(100),
+        searchWikipediaDestinations('popular travel destinations'),
+        searchWikipediaPlaces('popular tourist attractions'),
       ]);
 
       if (cancelled) {
         return;
       }
 
-      if (destinationResult.status === 'fulfilled') {
+      if (wikipediaResult.status === 'fulfilled') {
+        setDestinations(wikipediaResult.value);
+      } else if (destinationResult.status === 'fulfilled') {
         setDestinations(destinationResult.value.map((destination) => ({
           ...destination,
           kind: 'destination',
@@ -89,8 +98,41 @@ export default function Home({
         );
       }
       setDestinationsLoading(false);
+      const homeDestinationNames = new Map(
+        (destinationResult.status === 'fulfilled' ? destinationResult.value : []).map(
+          (destination) => [
+            String(destination.id),
+            [destination.name, destination.country].filter(Boolean).join(', '),
+          ],
+        ),
+      );
+      const apiPlaces = placesResult.status === 'fulfilled'
+        ? await enrichPlacesWithWikipedia(
+            placesResult.value.slice(0, 6).map((place) => ({
+              ...place,
+              location:
+                homeDestinationNames.get(String(place.destination_id)) ||
+                place.address ||
+                '',
+            })),
+          )
+        : [];
 
-      if (placesResult.status === 'fulfilled') {
+      if (
+        wikipediaPlacesResult.status === 'fulfilled' &&
+        (placesResult.status !== 'fulfilled' || placesResult.value.length === 0)
+      ) {
+        setRecommendations(wikipediaPlacesResult.value.map((place) => ({
+          ...place,
+          kind: 'place',
+          name: place.title,
+          title: place.title,
+          desc: place.desc || '',
+          img: place.img || '',
+          location: place.location || '',
+          tags: place.category ? [place.category] : [],
+        })));
+      } else if (placesResult.status === 'fulfilled') {
         const destinationDailyCosts = new Map(
           destinationResult.status === 'fulfilled'
             ? destinationResult.value.map((destination) => [
@@ -127,7 +169,7 @@ export default function Home({
               ])
             : [],
         );
-        setRecommendations(placesResult.value.map((place) => ({
+        setRecommendations(apiPlaces.map((place) => ({
           ...place,
           kind: 'place',
           estimated_daily_cost_usd: destinationDailyCosts.get(
@@ -138,19 +180,21 @@ export default function Home({
           ),
           ...destinationDetails.get(String(place.destination_id)),
           title: place.name,
-          desc: place.description || '',
+          desc: place.desc || place.description || '',
           location:
             destinationNames.get(String(place.destination_id)) ||
             place.address ||
             '',
-          img: place.image || '',
+          img: place.img || place.image || '',
         })));
       } else {
         setRecommendations([]);
         setRecommendationsError(
-          placesResult.reason instanceof Error
-            ? placesResult.reason.message
-            : 'Could not load recommended places.',
+          wikipediaPlacesResult.reason instanceof Error
+            ? wikipediaPlacesResult.reason.message
+            : placesResult.reason instanceof Error
+              ? placesResult.reason.message
+              : 'Could not load recommended places.',
         );
       }
       setRecommendationsLoading(false);
@@ -189,7 +233,7 @@ export default function Home({
         slides.findIndex((slide) => slide.img === destination.img) === index,
     )
     .slice(0, 5);
-  const heroSlides = [...apiHeroSlides, ...HERO_FALLBACK_SLIDES]
+  const heroSlides = [...apiHeroSlides, ...(apiHeroSlides.length ? [] : HERO_FALLBACK_SLIDES)]
     .filter(
       (slide, index, slides) =>
         slides.findIndex((candidate) => candidate.img === slide.img) === index,
@@ -206,7 +250,7 @@ export default function Home({
 
     const timer = window.setInterval(() => {
       setActiveHeroSlideIndex((index) => (index + 1) % heroSlides.length);
-    }, 2000);
+    }, 5000);
 
     return () => window.clearInterval(timer);
   }, [heroSlides.length, heroTimerResetKey, isHeroFocused]);
@@ -289,7 +333,9 @@ export default function Home({
             </h1>
 
             <p className="text-slate-300 text-xs md:text-sm max-w-xl mx-auto">
-              {activeHeroSlide?.desc ||
+              {(activeHeroSlide?.desc
+                ? `${activeHeroSlide.desc.slice(0, 180)}${activeHeroSlide.desc.length > 180 ? '…' : ''}`
+                : null) ||
                 'Discover places, plan your trip, manage your budget, and keep everything in one calm workspace.'}
             </p>
           </div>

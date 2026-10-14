@@ -93,3 +93,80 @@ export async function getWikipediaPlaceById(pageId) {
 
   return mapWikipediaPage(pages[0]);
 }
+
+export async function searchWikipediaDestinations(query = 'popular travel destinations', signal) {
+  const result = await fetchWikimediaQuery(WIKIPEDIA_API_URL, {
+    generator: 'search',
+    gsrsearch: query,
+    gsrnamespace: '0',
+    gsrlimit: '30',
+  }, signal);
+
+  return (Array.isArray(result.pages) ? result.pages : [])
+    .filter(isEarthPlace)
+    .sort((left, right) => left.index - right.index)
+    .map((page) => {
+      const place = mapWikipediaPage(page);
+      return {
+        ...place,
+        kind: 'destination',
+        name: place.title,
+        title: place.title,
+        desc: place.desc,
+        img: place.img,
+        type: 'Destinations',
+        location: place.category,
+      };
+    });
+}
+
+export async function enrichPlacesWithWikipedia(places, signal) {
+  return Promise.all(
+    places.map(async (place) => {
+      const query = [place.name || place.title, place.location, place.address]
+        .filter(Boolean)
+        .join(' ');
+      if (!query) return place;
+
+      try {
+        const result = await fetchWikimediaQuery(WIKIPEDIA_API_URL, {
+          generator: 'search',
+          gsrsearch: query,
+          gsrnamespace: '0',
+          gsrlimit: '8',
+        }, signal);
+        const targetName = (place.name || place.title || '')
+          .toLocaleLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, ' ')
+          .trim();
+        const match = (Array.isArray(result.pages) ? result.pages : [])
+          .filter(isEarthPlace)
+          .map((page) => ({
+            page,
+            title: page.title.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(),
+          }))
+          .sort((left, right) => {
+            const leftExact = left.title === targetName ? 1 : 0;
+            const rightExact = right.title === targetName ? 1 : 0;
+            return rightExact - leftExact;
+          })
+          .find(({ title }) => title === targetName || title.includes(targetName) || targetName.includes(title));
+
+        if (!match) return place;
+        const wikiPlace = mapWikipediaPage(match.page, place.location);
+        return {
+          ...place,
+          description: wikiPlace.desc || place.description,
+          desc: wikiPlace.desc || place.desc || place.description,
+          image: wikiPlace.img || place.image,
+          img: wikiPlace.img || place.img || place.image,
+          source: 'Wikipedia',
+          sourceUrl: wikiPlace.sourceUrl,
+        };
+      } catch (error) {
+        console.warn(`Could not enrich ${place.name || place.title} with Wikipedia data:`, error);
+        return place;
+      }
+    }),
+  );
+}

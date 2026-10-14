@@ -34,7 +34,7 @@ function AIAssistant() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const endOfMessagesRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
   const loadChatData = useCallback(async () => {
     try {
@@ -94,7 +94,10 @@ function AIAssistant() {
   );
 
   useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }
   }, [activeMessages, sending]);
 
   function startNewConversation() {
@@ -189,8 +192,8 @@ function AIAssistant() {
   }
 
   return (
-    <main className="min-h-full bg-slate-50 p-4 text-slate-800 sm:p-6">
-      <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-7xl flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 lg:min-h-[calc(100dvh-3rem)] lg:flex-row">
+    <main className="min-h-full bg-slate-50 p-4 text-slate-800 sm:p-6 lg:h-full lg:min-h-0">
+      <div className="mx-auto flex min-h-[32rem] max-w-7xl flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 lg:h-full lg:min-h-0 lg:flex-row">
         <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-slate-50/80 p-4 lg:w-72 lg:border-b-0 lg:border-r">
           <div className="flex items-center gap-3 px-2 py-2">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
@@ -211,13 +214,13 @@ function AIAssistant() {
             New conversation
           </button>
 
-          <div className="mt-6 min-h-0 flex-1">
+          <div className="mt-6 flex min-h-0 flex-1 flex-col">
             <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Recent conversations
             </p>
             <nav
               aria-label="Recent conversations"
-              className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-y-auto"
+              className="flex min-h-0 flex-1 gap-2 overflow-x-auto lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto"
             >
               {conversations.map((conversation) => {
                 const active =
@@ -254,7 +257,7 @@ function AIAssistant() {
 
         <section
           aria-label="Travel assistant conversation"
-          className="flex min-h-[70dvh] min-w-0 flex-1 flex-col lg:min-h-0"
+          className="flex min-h-[65dvh] min-w-0 flex-1 flex-col lg:min-h-0"
         >
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-7">
             <div className="min-w-0">
@@ -303,7 +306,8 @@ function AIAssistant() {
 
           <div
             aria-live="polite"
-            className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-7"
+            ref={messagesContainerRef}
+            className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-6 sm:px-7"
           >
             {activeMessages.length === 0 && (
               <div className="mx-auto mt-8 max-w-xl text-center sm:mt-16">
@@ -380,7 +384,6 @@ function AIAssistant() {
                 </span>
               </div>
             )}
-            <div ref={endOfMessagesRef} />
           </div>
 
           <form

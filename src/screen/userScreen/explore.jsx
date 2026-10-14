@@ -3,7 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DestinationCard from '../../features/discovery/page/components/DestinationCard';
 import { getHomeDestinations } from '../../services/api/homeApi';
 import { fetchPlaces } from '../../services/api/placeapi';
-import { searchWikipediaPlaces } from '../../services/api/wikipediaPlaces';
+import {
+  enrichPlacesWithWikipedia,
+  searchWikipediaDestinations,
+  searchWikipediaPlaces,
+} from '../../services/api/wikipediaPlaces';
 import { getPlaceDetailPath } from '../../features/discovery/page/placeRoutes';
 import { getSavedItemKey } from '../../features/discovery/page/components/savedItemKey';
 
@@ -36,9 +40,11 @@ function Explore({
     let isMounted = true;
 
     async function loadData() {
-      const [destinationResult, placeResult] = await Promise.allSettled([
+      const [destinationResult, placeResult, wikipediaDestinationsResult, wikipediaPlacesResult] = await Promise.allSettled([
         getHomeDestinations(),
         fetchPlaces(),
+        searchWikipediaDestinations('popular travel destinations'),
+        searchWikipediaPlaces('popular tourist attractions'),
       ]);
 
       if (!isMounted) {
@@ -64,6 +70,7 @@ function Explore({
                 : destination.name,
               desc: destination.description || '',
               img: destination.image || '',
+              location: destination.country || '',
               type: 'Destinations',
             }))
           : [];
@@ -121,9 +128,47 @@ function Explore({
             }))
           : [];
 
-      setDestinations([...destinationData, ...placeData]);
+      const wikipediaPlaceData =
+        wikipediaPlacesResult.status === 'fulfilled'
+          ? wikipediaPlacesResult.value.map((place) => ({
+              ...place,
+              kind: 'place',
+              name: place.title,
+              title: place.title,
+              desc: place.desc || '',
+              img: place.img || '',
+              tags: place.category ? [place.category] : [],
+            }))
+          : [];
+      const wikipediaDestinationData =
+        wikipediaDestinationsResult.status === 'fulfilled'
+          ? wikipediaDestinationsResult.value
+          : [];
+
+      const apiItemsToEnrich = [
+        ...destinationData.slice(0, 6),
+        ...placeData.slice(0, 12),
+      ];
+      const enrichedApiItems = await enrichPlacesWithWikipedia(apiItemsToEnrich);
+      if (!isMounted) return;
+      const enrichedById = new Map(
+        enrichedApiItems.map((item) => [`${item.kind}-${item.id}`, item]),
+      );
+      const enrichedDestinations = destinationData.map(
+        (item) => enrichedById.get(`${item.kind}-${item.id}`) || item,
+      );
+      const enrichedPlaces = placeData.map(
+        (item) => enrichedById.get(`${item.kind}-${item.id}`) || item,
+      );
+
+      setDestinations([
+        ...enrichedDestinations,
+        ...enrichedPlaces,
+        ...wikipediaDestinationData,
+        ...wikipediaPlaceData,
+      ]);
       setApiError(
-        [destinationResult, placeResult]
+        [destinationResult, placeResult, wikipediaDestinationsResult, wikipediaPlacesResult]
           .filter((result) => result.status === 'rejected')
           .map((result) =>
             result.reason instanceof Error
@@ -247,7 +292,7 @@ function Explore({
               Explore Destinations & Places
             </h1>
             <p className="text-sm text-teal-100/80 sm:text-base">
-              Browse destinations and places from the API, or search online for more ideas.
+              Explore destinations and places from TripOS and Wikipedia, or search Wikipedia for more ideas.
             </p>
           </div>
           <div className="absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
@@ -303,7 +348,7 @@ function Explore({
               <span className="text-teal-700">
                 {onlineResults ? onlineResults.length : filteredPlaces.length}
               </span>{' '}
-              {onlineResults ? 'Online places' : 'API results'}
+              {onlineResults ? 'Online places' : 'Wikipedia & API results'}
             </div>
           </div>
 
