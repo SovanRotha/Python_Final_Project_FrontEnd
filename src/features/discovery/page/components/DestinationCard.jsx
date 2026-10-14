@@ -219,6 +219,17 @@ export default function DestinationCard({
         <p className="line-clamp-2 min-h-10 text-xs leading-5 text-slate-600">
           {description}
         </p>
+        {item.sourceUrl && (
+          <a
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(event) => event.stopPropagation()}
+            className="mt-1 inline-flex text-[10px] font-semibold text-teal-700 underline decoration-teal-300 underline-offset-2 hover:text-teal-900"
+          >
+            Wikipedia source
+          </a>
+        )}
         <div className="mt-3 grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-slate-50 px-2">
           <Fact label="Best time" value={bestTime} />
           <Fact label="Currency" value={getCurrencyFact(item.currency)} />

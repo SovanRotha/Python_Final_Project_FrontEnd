@@ -123,34 +123,40 @@ export async function searchWikipediaDestinations(query = 'popular travel destin
 export async function enrichPlacesWithWikipedia(places, signal) {
   return Promise.all(
     places.map(async (place) => {
-      const query = [place.name || place.title, place.location, place.address]
-        .filter(Boolean)
-        .join(' ');
-      if (!query) return place;
+      const name = place.name || place.title || '';
+      if (!name) return place;
+      const queries = [
+        name,
+        [name, place.location, place.address].filter(Boolean).join(' '),
+      ].filter((query, index, all) => query && all.indexOf(query) === index);
 
       try {
-        const result = await fetchWikimediaQuery(WIKIPEDIA_API_URL, {
-          generator: 'search',
-          gsrsearch: query,
-          gsrnamespace: '0',
-          gsrlimit: '8',
-        }, signal);
-        const targetName = (place.name || place.title || '')
+        const targetName = name
           .toLocaleLowerCase()
           .replace(/[^\p{L}\p{N}]+/gu, ' ')
           .trim();
-        const match = (Array.isArray(result.pages) ? result.pages : [])
-          .filter(isEarthPlace)
-          .map((page) => ({
-            page,
-            title: page.title.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(),
-          }))
-          .sort((left, right) => {
-            const leftExact = left.title === targetName ? 1 : 0;
-            const rightExact = right.title === targetName ? 1 : 0;
-            return rightExact - leftExact;
-          })
-          .find(({ title }) => title === targetName || title.includes(targetName) || targetName.includes(title));
+        let match = null;
+        for (const query of queries) {
+          const result = await fetchWikimediaQuery(WIKIPEDIA_API_URL, {
+            generator: 'search',
+            gsrsearch: query,
+            gsrnamespace: '0',
+            gsrlimit: '8',
+          }, signal);
+          match = (Array.isArray(result.pages) ? result.pages : [])
+            .filter(isEarthPlace)
+            .map((page) => ({
+              page,
+              title: page.title.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(),
+            }))
+            .filter(({ title }) => title === targetName || title.includes(targetName))
+            .sort((left, right) => {
+              const exactDifference = Number(right.title === targetName) - Number(left.title === targetName);
+              if (exactDifference) return exactDifference;
+              return Number(Boolean(right.page.thumbnail?.source)) - Number(Boolean(left.page.thumbnail?.source));
+            })[0] || null;
+          if (match) break;
+        }
 
         if (!match) return place;
         const wikiPlace = mapWikipediaPage(match.page, place.location);

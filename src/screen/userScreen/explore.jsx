@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DestinationCard from '../../features/discovery/page/components/DestinationCard';
-import { getHomeDestinations } from '../../services/api/homeApi';
-import { fetchPlaces } from '../../services/api/placeapi';
 import {
-  enrichPlacesWithWikipedia,
   searchWikipediaDestinations,
   searchWikipediaPlaces,
 } from '../../services/api/wikipediaPlaces';
@@ -40,9 +37,7 @@ function Explore({
     let isMounted = true;
 
     async function loadData() {
-      const [destinationResult, placeResult, wikipediaDestinationsResult, wikipediaPlacesResult] = await Promise.allSettled([
-        getHomeDestinations(),
-        fetchPlaces(),
+      const [wikipediaDestinationsResult, wikipediaPlacesResult] = await Promise.allSettled([
         searchWikipediaDestinations('popular travel destinations'),
         searchWikipediaPlaces('popular tourist attractions'),
       ]);
@@ -50,83 +45,6 @@ function Explore({
       if (!isMounted) {
         return;
       }
-
-      const destinationDailyCosts = new Map(
-        (destinationResult.status === 'fulfilled'
-          ? destinationResult.value
-          : []
-        ).map((destination) => [
-          String(destination.id),
-          destination.average_daily_cost_usd,
-        ]),
-      );
-      const destinationData =
-        destinationResult.status === 'fulfilled'
-          ? destinationResult.value.map((destination) => ({
-              ...destination,
-              kind: 'destination',
-              title: destination.country
-                ? `${destination.name}, ${destination.country}`
-                : destination.name,
-              desc: destination.description || '',
-              img: destination.image || '',
-              location: destination.country || '',
-              type: 'Destinations',
-            }))
-          : [];
-      const destinationNames = new Map(
-        (destinationResult.status === 'fulfilled'
-          ? destinationResult.value
-          : []
-        ).map((destination) => [
-          String(destination.id),
-          [destination.name, destination.country].filter(Boolean).join(', '),
-        ]),
-      );
-      const destinationCurrencies = new Map(
-        (destinationResult.status === 'fulfilled'
-          ? destinationResult.value
-          : []
-        ).map((destination) => [
-          String(destination.id),
-          destination.currency,
-        ]),
-      );
-      const destinationDetails = new Map(
-        (destinationResult.status === 'fulfilled'
-          ? destinationResult.value
-          : []
-        ).map((destination) => [
-          String(destination.id),
-          {
-            currency: destination.currency,
-            language: destination.language,
-            best_time: destination.best_time,
-          },
-        ]),
-      );
-      const placeData =
-        placeResult.status === 'fulfilled'
-          ? placeResult.value.map((place) => ({
-              ...place,
-              kind: 'place',
-              estimated_daily_cost_usd: destinationDailyCosts.get(
-                String(place.destination_id),
-              ),
-              currency: destinationCurrencies.get(
-                String(place.destination_id),
-              ),
-              ...destinationDetails.get(String(place.destination_id)),
-              title: place.name,
-              desc: place.description || '',
-              location:
-                destinationNames.get(String(place.destination_id)) ||
-                place.address ||
-                '',
-              img: place.image || '',
-              tags: place.category ? [place.category] : [],
-            }))
-          : [];
 
       const wikipediaPlaceData =
         wikipediaPlacesResult.status === 'fulfilled'
@@ -144,36 +62,20 @@ function Explore({
         wikipediaDestinationsResult.status === 'fulfilled'
           ? wikipediaDestinationsResult.value
           : [];
-
-      const apiItemsToEnrich = [
-        ...destinationData.slice(0, 6),
-        ...placeData.slice(0, 12),
-      ];
-      const enrichedApiItems = await enrichPlacesWithWikipedia(apiItemsToEnrich);
-      if (!isMounted) return;
-      const enrichedById = new Map(
-        enrichedApiItems.map((item) => [`${item.kind}-${item.id}`, item]),
+      const uniqueWikipediaResults = new Map(
+        [...wikipediaDestinationData, ...wikipediaPlaceData].map((item) => [
+          item.id,
+          item,
+        ]),
       );
-      const enrichedDestinations = destinationData.map(
-        (item) => enrichedById.get(`${item.kind}-${item.id}`) || item,
-      );
-      const enrichedPlaces = placeData.map(
-        (item) => enrichedById.get(`${item.kind}-${item.id}`) || item,
-      );
-
-      setDestinations([
-        ...enrichedDestinations,
-        ...enrichedPlaces,
-        ...wikipediaDestinationData,
-        ...wikipediaPlaceData,
-      ]);
+      setDestinations([...uniqueWikipediaResults.values()]);
       setApiError(
-        [destinationResult, placeResult, wikipediaDestinationsResult, wikipediaPlacesResult]
+        [wikipediaDestinationsResult, wikipediaPlacesResult]
           .filter((result) => result.status === 'rejected')
           .map((result) =>
             result.reason instanceof Error
               ? result.reason.message
-              : 'An API request failed.',
+              : 'A Wikipedia API request failed.',
           )
           .join(' '),
       );
@@ -193,10 +95,24 @@ function Explore({
     setReloadKey((key) => key + 1);
   }
 
-  async function completeOnlineSearch(searchTerm) {
+  async function completeOnlineSearch(searchTerm, category = selectedCategory) {
     try {
+      if (category === 'Destinations') {
+        const destinations = await searchWikipediaDestinations(searchTerm);
+        setOnlineResults(destinations);
+        setOnlineContinuation(null);
+        setOnlineCountryName(null);
+        return;
+      }
+
       const result = await searchWikipediaPlaces(searchTerm);
-      setOnlineResults(result.places);
+      setOnlineResults(
+        result.places.map((place) => ({
+          ...place,
+          kind: 'place',
+          name: place.title,
+        })),
+      );
       setOnlineContinuation(result.continuation);
       setOnlineCountryName(result.countryName);
     } catch (error) {
@@ -223,7 +139,7 @@ function Explore({
     setOnlineResults(null);
     setOnlineContinuation(null);
     setOnlineCountryName(null);
-    await completeOnlineSearch(searchTerm);
+    await completeOnlineSearch(searchTerm, selectedCategory);
   }
 
   async function handleLoadMoreOnline() {
@@ -237,11 +153,16 @@ function Explore({
         undefined,
         onlineContinuation,
       );
+      const nextPlaces = result.places.map((place) => ({
+        ...place,
+        kind: 'place',
+        name: place.title,
+      }));
       setOnlineResults((currentResults) => {
         const existingIds = new Set(currentResults.map((place) => place.id));
         return [
           ...currentResults,
-          ...result.places.filter((place) => !existingIds.has(place.id)),
+          ...nextPlaces.filter((place) => !existingIds.has(place.id)),
         ];
       });
       setOnlineContinuation(result.continuation);
@@ -292,7 +213,7 @@ function Explore({
               Explore Destinations & Places
             </h1>
             <p className="text-sm text-teal-100/80 sm:text-base">
-              Explore destinations and places from TripOS and Wikipedia, or search Wikipedia for more ideas.
+              Explore destinations and places from Wikipedia, or search for a city, country, or landmark.
             </p>
           </div>
           <div className="absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
@@ -348,7 +269,7 @@ function Explore({
               <span className="text-teal-700">
                 {onlineResults ? onlineResults.length : filteredPlaces.length}
               </span>{' '}
-              {onlineResults ? 'Online places' : 'Wikipedia & API results'}
+              {onlineResults ? 'Wikipedia places' : 'Wikipedia results'}
             </div>
           </div>
 
@@ -542,7 +463,7 @@ function Explore({
         ) : onlineResults === null && !isLoading && !apiError ? (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
             <p className="text-base font-semibold text-slate-700">
-              No API results match “{query}”
+              No Wikipedia results match “{query}”
             </p>
             <p className="mt-1 text-sm text-slate-500">
               Try adjusting your search terms or clearing selected category filters.
